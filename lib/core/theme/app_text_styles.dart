@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// Haven Design System — Typography
-/// Optimized for legibility under stress.
-/// Critical info: bold, high contrast, optionally ALL CAPS.
-/// Numbers (time, distance): monospaced.
 abstract final class AppTextStyles {
   // ── Display / Headings ─────────────────────────────────────────────────────
   static const TextStyle displayLarge = TextStyle(
@@ -53,7 +49,6 @@ abstract final class AppTextStyles {
   );
 
   // ── Critical / Alert ───────────────────────────────────────────────────────
-  /// Use for SOS labels, banner text, emergency states.
   static const TextStyle critical = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w700,
@@ -70,7 +65,7 @@ abstract final class AppTextStyles {
     height: 1.2,
   );
 
-  // ── Monospaced (time, distance, coordinates) ───────────────────────────────
+  // ── Monospaced ─────────────────────────────────────────────────────────────
   static const TextStyle mono = TextStyle(
     fontFamily: 'monospace',
     fontSize: 16,
@@ -113,7 +108,7 @@ abstract final class AppTextStyles {
   static const TextStyle buttonSecondary = TextStyle(
     fontSize: 15,
     fontWeight: FontWeight.w600,
-    color: AppColors.bluePrimary,
+    color: AppColors.rosePrimary,
     letterSpacing: 0.3,
   );
 }
