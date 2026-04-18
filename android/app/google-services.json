@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "831027760598",
+    "project_id": "haven-wsa",
+    "storage_bucket": "haven-wsa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:831027760598:android:1c351fe925517bc6692877",
+        "android_client_info": {
+          "package_name": "com.jais.haven"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAcxUPkQm1mmLKQzCjmFzBCCqkui95Rscc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -9,20 +9,28 @@ class WomenRegisterState {
   final String? aadhaarNumber;
   final bool isProcessing;
 
-  // Step 1 — Form
+  // Step 1 — Personal Details
+  final String? profilePhotoPath;
   final String name;
   final String email;
   final String phone;
+
+  // Step 2 — Address
   final String address;
   final String pincode;
   final String state;
   final String district;
+
+  // Step 3 — Security
+  final String password;
+  final String confirmPassword;
 
   const WomenRegisterState({
     this.step = 0,
     this.aadhaarImagePath,
     this.aadhaarNumber,
     this.isProcessing = false,
+    this.profilePhotoPath,
     this.name = '',
     this.email = '',
     this.phone = '',
@@ -30,6 +38,8 @@ class WomenRegisterState {
     this.pincode = '',
     this.state = '',
     this.district = '',
+    this.password = '',
+    this.confirmPassword = '',
   });
 
   WomenRegisterState copyWith({
@@ -37,6 +47,7 @@ class WomenRegisterState {
     String? aadhaarImagePath,
     String? aadhaarNumber,
     bool? isProcessing,
+    String? profilePhotoPath,
     String? name,
     String? email,
     String? phone,
@@ -44,12 +55,15 @@ class WomenRegisterState {
     String? pincode,
     String? state,
     String? district,
+    String? password,
+    String? confirmPassword,
   }) {
     return WomenRegisterState(
       step: step ?? this.step,
       aadhaarImagePath: aadhaarImagePath ?? this.aadhaarImagePath,
       aadhaarNumber: aadhaarNumber ?? this.aadhaarNumber,
       isProcessing: isProcessing ?? this.isProcessing,
+      profilePhotoPath: profilePhotoPath ?? this.profilePhotoPath,
       name: name ?? this.name,
       email: email ?? this.email,
       phone: phone ?? this.phone,
@@ -57,6 +71,8 @@ class WomenRegisterState {
       pincode: pincode ?? this.pincode,
       state: state ?? this.state,
       district: district ?? this.district,
+      password: password ?? this.password,
+      confirmPassword: confirmPassword ?? this.confirmPassword,
     );
   }
 }
@@ -80,6 +96,9 @@ class WomenRegisterCubit extends Cubit<WomenRegisterState> {
         aadhaarNumber: null,
       ));
 
+  void setProfilePhoto(String? path) =>
+      emit(state.copyWith(profilePhotoPath: path));
+
   void goToStep(int step) => emit(state.copyWith(step: step));
 
   void updateForm({
@@ -90,6 +109,8 @@ class WomenRegisterCubit extends Cubit<WomenRegisterState> {
     String? pincode,
     String? state,
     String? district,
+    String? password,
+    String? confirmPassword,
   }) =>
       emit(this.state.copyWith(
         name: name,
@@ -99,5 +120,7 @@ class WomenRegisterCubit extends Cubit<WomenRegisterState> {
         pincode: pincode,
         state: state,
         district: district,
+        password: password,
+        confirmPassword: confirmPassword,
       ));
 }
