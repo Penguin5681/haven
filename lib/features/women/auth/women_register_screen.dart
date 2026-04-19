@@ -11,7 +11,8 @@ import '../../../core/theme/app_colors.dart';
 import 'women_register_cubit.dart';
 
 class WomenRegisterScreen extends StatefulWidget {
-  const WomenRegisterScreen({super.key});
+  final VoidCallback? onSuccess;
+  const WomenRegisterScreen({super.key, this.onSuccess});
 
   @override
   State<WomenRegisterScreen> createState() => _WomenRegisterScreenState();
@@ -147,10 +148,7 @@ class _WomenRegisterScreenState extends State<WomenRegisterScreen> {
   void _submit(WomenRegisterCubit cubit) {
     if (!_securityFormKey.currentState!.validate()) return;
     _saveFormToState(cubit);
-    // TODO: hand off to backend
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration successful!')));
-    Navigator.of(context).pop();
+    cubit.submitRegistration();
   }
 
   Widget _buildStepContent(int step, WomenRegisterState state, WomenRegisterCubit cubit) {
@@ -203,6 +201,7 @@ class _WomenRegisterScreenState extends State<WomenRegisterScreen> {
       case 3:
         return _SecurityStep(
           key: const ValueKey(3),
+          state: state,
           formKey: _securityFormKey,
           passwordCtrl: _passwordCtrl,
           confirmPasswordCtrl: _confirmPasswordCtrl,
@@ -235,7 +234,27 @@ class _WomenRegisterScreenState extends State<WomenRegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WomenRegisterCubit, WomenRegisterState>(
+    return BlocConsumer<WomenRegisterCubit, WomenRegisterState>(
+      listenWhen: (previous, current) {
+        return previous.submissionError != current.submissionError ||
+            previous.isSuccess != current.isSuccess;
+      },
+      listener: (context, state) {
+        if (state.submissionError != null && state.submissionError!.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.submissionError!)));
+        }
+        if (state.isSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Registration successful!')));
+          if (widget.onSuccess != null) {
+            widget.onSuccess!();
+            Navigator.of(context).pop();
+          } else {
+            Navigator.of(context).pop();
+          }
+        }
+      },
       builder: (context, state) {
         final cubit = context.read<WomenRegisterCubit>();
         _initControllers(state);
@@ -585,6 +604,7 @@ class _AddressStep extends StatelessWidget {
 
 // ── Step 3: Security ──────────────────────────────────────────────────────────
 class _SecurityStep extends StatelessWidget {
+  final WomenRegisterState state;
   final GlobalKey<FormState> formKey;
   final TextEditingController passwordCtrl;
   final TextEditingController confirmPasswordCtrl;
@@ -597,6 +617,7 @@ class _SecurityStep extends StatelessWidget {
 
   const _SecurityStep({
     super.key,
+    required this.state,
     required this.formKey,
     required this.passwordCtrl,
     required this.confirmPasswordCtrl,
@@ -664,8 +685,14 @@ class _SecurityStep extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             ElevatedButton(
-              onPressed: onSubmit,
-              child: const Text('Submit Registration'),
+              onPressed: state.isSubmitting ? null : onSubmit,
+              child: state.isSubmitting
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Submit Registration'),
             ),
           ],
         ),

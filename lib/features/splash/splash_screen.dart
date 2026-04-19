@@ -2,6 +2,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/services/auth_service.dart';
+import '../women/women_home_screen.dart';
+import '../authority/authority_home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   final Widget nextScreen;
@@ -92,14 +95,29 @@ class _SplashScreenState extends State<SplashScreen>
     _logoCtrl.forward();
     await Future.delayed(const Duration(milliseconds: 500));
     _bottomCtrl.forward();
+
+    // Check auth while waiting
+    final token = await AuthService.instance.getToken();
+    final role = await AuthService.instance.getRole();
+
     // Hold for reading
     await Future.delayed(const Duration(milliseconds: 1600));
     _dotCtrl.stop();
     await _exitCtrl.forward();
     if (!mounted) return;
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+    Widget next = widget.nextScreen;
+    if (token != null && role != null) {
+      if (role == 'women') {
+        next = const WomenHomeScreen();
+      } else if (role == 'authority') {
+        next = const AuthorityHomeScreen();
+      }
+    }
+
     Navigator.of(context).pushReplacement(PageRouteBuilder(
-      pageBuilder: (context, anim, secondaryAnim) => widget.nextScreen,
+      pageBuilder: (context, anim, secondaryAnim) => next,
       transitionDuration: Duration.zero,
     ));
   }
