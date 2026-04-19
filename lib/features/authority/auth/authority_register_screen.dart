@@ -46,7 +46,7 @@ class _AuthorityRegisterScreenState extends State<AuthorityRegisterScreen> {
       await Future.delayed(const Duration(seconds: 2));
       
       // Auto login dummy logic
-      // await AuthService.instance.login(_emailCtrl.text, _passwordCtrl.text);
+      // await AuthService.instance.login(_emailCtrl.text, _passwordCtrl.text, role: 'authority');
 
       if (mounted) {
         widget.onSuccess();

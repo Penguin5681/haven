@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/auth_service.dart';
 
 class WomenDashboardScreen extends StatefulWidget {
   final VoidCallback onLogout;
@@ -88,30 +89,72 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
   }
 }
 
-class _HomeTab extends StatelessWidget {
+class _HomeTab extends StatefulWidget {
   final VoidCallback onLogout;
   const _HomeTab({required this.onLogout});
 
   @override
+  State<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<_HomeTab> {
+  Map<String, dynamic>? _profile;
+  bool _isLoadingProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final profile = await AuthService.instance.getProfile();
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _isLoadingProfile = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load profile: $e');
+      if (mounted) {
+        setState(() => _isLoadingProfile = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final String name = _profile?['full_name'] ?? 'User';
+    final String? photoUrl = _profile?['profile_photo_url'];
+
     return SafeArea(
       child: CustomScrollView(
         slivers: [
           SliverAppBar(
             backgroundColor: AppColors.background,
             floating: true,
+            automaticallyImplyLeading: false,
             title: Row(
               children: [
                 CircleAvatar(
                   backgroundColor: AppColors.rosePrimary,
-                  child: const Icon(Icons.person, color: Colors.white, size: 20),
+                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                  child: photoUrl == null ? const Icon(Icons.person, color: Colors.white, size: 20) : null,
                 ),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text('Stay Safe,', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                    Text('User', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  children: [
+                    const Text('Stay Safe,', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    _isLoadingProfile
+                        ? const SizedBox(
+                            width: 50,
+                            height: 10,
+                            child: LinearProgressIndicator(color: AppColors.rosePrimary),
+                          )
+                        : Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                   ],
                 ),
               ],
@@ -119,7 +162,7 @@ class _HomeTab extends StatelessWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.logout, color: AppColors.rosePrimary),
-                onPressed: onLogout,
+                onPressed: widget.onLogout,
               )
             ],
           ),

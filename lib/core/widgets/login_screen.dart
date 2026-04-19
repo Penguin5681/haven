@@ -7,6 +7,7 @@ class LoginScreen extends StatefulWidget {
   final String subtitle;
   final Color accentColor;
   final VoidCallback onSuccess;
+  final String role;
 
   const LoginScreen({
     super.key,
@@ -14,6 +15,7 @@ class LoginScreen extends StatefulWidget {
     required this.subtitle,
     required this.accentColor,
     required this.onSuccess,
+    required this.role,
   });
 
   @override
@@ -40,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     
     try {
-      await AuthService.instance.login(_emailCtrl.text, _passwordCtrl.text);
+      await AuthService.instance.login(_emailCtrl.text, _passwordCtrl.text, role: widget.role);
       if (mounted) {
         widget.onSuccess();
         Navigator.of(context).pop();

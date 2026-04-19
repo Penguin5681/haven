@@ -59,6 +59,7 @@ class _AuthorityHomeScreenState extends State<AuthorityHomeScreen> {
     if (_isLoggedIn) {
       return Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           title: const Text('Responder Dashboard'),
           backgroundColor: AppColors.bluePrimary,
           foregroundColor: Colors.white,
@@ -85,6 +86,7 @@ class _AuthorityHomeScreenState extends State<AuthorityHomeScreen> {
         subtitle: 'Enter your credentials to access the portal.',
         accentColor: AppColors.bluePrimary,
         onSuccess: _onAuthSuccess,
+        role: 'authority',
       ),
       registerScreen: AuthorityRegisterScreen(onSuccess: _onAuthSuccess),
     );

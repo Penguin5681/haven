@@ -168,7 +168,7 @@ class WomenRegisterCubit extends Cubit<WomenRegisterState> {
       
       // Attempt auto-login to get the token
       try {
-        await AuthService.instance.login(state.email, state.password);
+        await AuthService.instance.login(state.email, state.password, role: 'women');
       } catch (e) {
         debugPrint('Auto-login failed after signup: $e');
         // We still consider registration a success even if auto-login fails

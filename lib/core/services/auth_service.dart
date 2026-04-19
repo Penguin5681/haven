@@ -75,7 +75,7 @@ class AuthService {
     }
   }
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  Future<Map<String, dynamic>> login(String email, String password, {String? role}) async {
     final uri = Uri.parse(ApiConstants.login);
     
     var response = await http.post(
@@ -97,7 +97,7 @@ class AuthService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final decoded = json.decode(responseBody);
       if (decoded['token'] != null) {
-        await saveToken(decoded['token']);
+        await saveToken(decoded['token'], role: role);
       }
       return decoded;
     } else {
@@ -122,9 +122,58 @@ class AuthService {
     }
   }
 
-  Future<void> saveToken(String token) async {
+  Future<Map<String, dynamic>> getProfile() async {
+    final token = await getToken();
+    if (token == null) throw Exception('No token found');
+
+    final uri = Uri.parse(ApiConstants.profile);
+    
+    var response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    var responseBody = response.body;
+
+    debugPrint('--- AUTH SERVICE GET ${uri.toString()} ---');
+    debugPrint('Status Code: ${response.statusCode}');
+    debugPrint('Response Body: $responseBody');
+    debugPrint('-------------------------------------------');
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final decoded = json.decode(responseBody);
+      return decoded['profile'] ?? decoded;
+    } else {
+      String errorMessage = 'Unknown error occurred';
+      try {
+        final dynamic decoded = json.decode(responseBody);
+        if (decoded is Map<String, dynamic>) {
+          errorMessage = decoded['message'] ?? decoded['error'] ?? responseBody;
+        } else {
+          errorMessage = responseBody;
+        }
+      } catch (_) {
+        if (responseBody.isNotEmpty) {
+          errorMessage = responseBody.length > 500
+              ? '${responseBody.substring(0, 500)}...'
+              : responseBody;
+        } else {
+          errorMessage = 'HTTP Error ${response.statusCode}';
+        }
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<void> saveToken(String token, {String? role}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('jwt_token', token);
+    if (role != null) {
+      await prefs.setString('user_role', role);
+    }
   }
 
   Future<String?> getToken() async {
@@ -132,8 +181,14 @@ class AuthService {
     return prefs.getString('jwt_token');
   }
 
+  Future<String?> getRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_role');
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
+    await prefs.remove('user_role');
   }
 }

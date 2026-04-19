@@ -72,6 +72,7 @@ class _WomenHomeScreenState extends State<WomenHomeScreen> {
         subtitle: 'Login to access your safe space.',
         accentColor: AppColors.rosePrimary,
         onSuccess: _onRegistrationSuccess,
+        role: 'women',
       ),
       registerScreen: BlocProvider(
         create: (_) => WomenRegisterCubit(),
