@@ -1,11 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Local design tokens  (light-mode only, extends AppColors without editing it)
+// ─────────────────────────────────────────────────────────────────────────────
+abstract final class _T {
+  // Surfaces
+  static const Color pageBg       = Color(0xFFFBF6F9);   // warm near-white
+  static const Color card         = Color(0xFFFFFFFF);
+  static const Color cardBorder   = Color(0xFFF0E0EA);
+  static const Color headerBg     = Color(0xFFFFFFFF);
+
+  // SOS
+  static const Color sosCore      = Color(0xFFD32F2F);
+  static const Color sosDeep      = Color(0xFFB71C1C);
+  static const Color sosRing1     = Color(0x26D32F2F);   // 15 %
+  static const Color sosRing2     = Color(0x14D32F2F);   // 8 %
+
+  // Status pill
+  static const Color safeText     = Color(0xFF1B6B3A);
+  static const Color safeBg       = Color(0xFFE9F7EE);
+  static const Color safeBorder   = Color(0xFFB2DFCB);
+  static const Color safeDot      = Color(0xFF2E7D32);
+
+  // Action cards  [surface, icon-bg, icon-fg]
+  static const List<List<Color>> act = [
+    [Color(0xFFEFF6FF), Color(0xFFDCEEFD), Color(0xFF1565C0)], // Live Track
+    [Color(0xFFF0FDF4), Color(0xFFD1FAE5), Color(0xFF15803D)], // Fake Call
+    [Color(0xFFF5F3FF), Color(0xFFEDE9FE), Color(0xFF6D28D9)], // Record
+    [Color(0xFFFFF7ED), Color(0xFFFFEDD5), Color(0xFFB45309)], // Safe Places
+  ];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Root scaffold
+// ─────────────────────────────────────────────────────────────────────────────
 class WomenDashboardScreen extends StatefulWidget {
   final VoidCallback onLogout;
-
   const WomenDashboardScreen({super.key, required this.onLogout});
 
   @override
@@ -14,8 +48,6 @@ class WomenDashboardScreen extends StatefulWidget {
 
 class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
   int _selectedIndex = 0;
-
-  // Placeholder views
   late final List<Widget> _pages;
 
   @override
@@ -31,57 +63,63 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 20,
-              color: Colors.black.withAlpha(12), // 0.05 opacity
-            )
-          ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: _T.pageBg,
+        body: _pages[_selectedIndex],
+        bottomNavigationBar: _BottomNav(
+          selectedIndex: _selectedIndex,
+          onChanged: (i) => setState(() => _selectedIndex = i),
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8),
-            child: GNav(
-              rippleColor: AppColors.roseTint,
-              hoverColor: AppColors.roseTint,
-              gap: 8,
-              activeColor: AppColors.rosePrimary,
-              iconSize: 24,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              duration: const Duration(milliseconds: 400),
-              tabBackgroundColor: AppColors.rosePrimary.withAlpha(25), // 0.1 opacity
-              color: AppColors.textSecondary,
-              tabs: const [
-                GButton(
-                  icon: Icons.home,
-                  text: 'Home',
-                ),
-                GButton(
-                  icon: Icons.group,
-                  text: 'Contacts',
-                ),
-                GButton(
-                  icon: Icons.map,
-                  text: 'Routes',
-                ),
-                GButton(
-                  icon: Icons.person,
-                  text: 'Profile',
-                ),
-              ],
-              selectedIndex: _selectedIndex,
-              onTabChange: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bottom Navigation
+// ─────────────────────────────────────────────────────────────────────────────
+class _BottomNav extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
+  const _BottomNav({required this.selectedIndex, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _T.card,
+        border: Border(top: BorderSide(color: _T.cardBorder, width: 1)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: GNav(
+            rippleColor: AppColors.roseTint,
+            hoverColor: AppColors.roseTint,
+            gap: 6,
+            activeColor: AppColors.rosePrimary,
+            iconSize: 22,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+            duration: const Duration(milliseconds: 250),
+            tabBackgroundColor: AppColors.roseTint,
+            tabBorderRadius: 14,
+            color: AppColors.textSecondary,
+            textStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.rosePrimary,
             ),
+            tabs: const [
+              GButton(icon: Icons.home_rounded,   text: 'Home'),
+              GButton(icon: Icons.group_rounded,  text: 'Contacts'),
+              GButton(icon: Icons.map_rounded,    text: 'Routes'),
+              GButton(icon: Icons.person_rounded, text: 'Profile'),
+            ],
+            selectedIndex: selectedIndex,
+            onTabChange: onChanged,
           ),
         ),
       ),
@@ -89,6 +127,9 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Home Tab
+// ─────────────────────────────────────────────────────────────────────────────
 class _HomeTab extends StatefulWidget {
   final VoidCallback onLogout;
   const _HomeTab({required this.onLogout});
@@ -97,221 +138,249 @@ class _HomeTab extends StatefulWidget {
   State<_HomeTab> createState() => _HomeTabState();
 }
 
-class _HomeTabState extends State<_HomeTab> {
+class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
   Map<String, dynamic>? _profile;
   bool _isLoadingProfile = true;
+
+  late final AnimationController _pulse;
+  late final AnimationController _hold;
+  bool _sosActive = false;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _hold = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..addStatusListener((s) {
+        if (s == AnimationStatus.completed) {
+          HapticFeedback.heavyImpact();
+          setState(() => _sosActive = true);
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              setState(() => _sosActive = false);
+              _hold.reset();
+            }
+          });
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    _hold.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {
     try {
-      final profile = await AuthService.instance.getProfile();
-      if (mounted) {
-        setState(() {
-          _profile = profile;
-          _isLoadingProfile = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Failed to load profile: $e');
-      if (mounted) {
-        setState(() => _isLoadingProfile = false);
-      }
+      final data = await AuthService.instance.getProfile();
+      if (mounted) setState(() { _profile = data; _isLoadingProfile = false; });
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingProfile = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final h = MediaQuery.of(context).size.height;
+    final topPad = MediaQuery.of(context).padding.top;
     final String name = _profile?['full_name'] ?? 'User';
     final String? photoUrl = _profile?['profile_photo_url'];
 
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            backgroundColor: AppColors.background,
-            floating: true,
-            automaticallyImplyLeading: false,
-            title: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.rosePrimary,
-                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                  child: photoUrl == null ? const Icon(Icons.person, color: Colors.white, size: 20) : null,
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Stay Safe,', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                    _isLoadingProfile
-                        ? const SizedBox(
-                            width: 50,
-                            height: 10,
-                            child: LinearProgressIndicator(color: AppColors.rosePrimary),
-                          )
-                        : Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  ],
-                ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout, color: AppColors.rosePrimary),
-                onPressed: widget.onLogout,
-              )
-            ],
+    return Column(
+      children: [
+        // ── 1. FIXED HEADER ──────────────────────────────────────────────
+        _Header(
+          topPad: topPad,
+          name: name,
+          photoUrl: photoUrl,
+          isLoading: _isLoadingProfile,
+          onLogout: widget.onLogout,
+        ),
+
+        // ── 2. AMBIENT SAFETY STATUS ─────────────────────────────────────
+        _StatusBar(),
+
+        // ── 3. ABOVE-THE-FOLD: SOS HERO ──────────────────────────────────
+        //    Critical action. Zero scrolling required.
+        SizedBox(
+          height: h * 0.38,
+          child: _SOSHero(
+            pulse: _pulse,
+            hold: _hold,
+            active: _sosActive,
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  // SOS Button
-                  GestureDetector(
-                    onTap: () {
-                      // Trigger SOS
-                    },
-                    child: Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.red.withAlpha(25),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.red.withAlpha(76),
-                            blurRadius: 30,
-                            spreadRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 150,
-                          height: 150,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [Colors.redAccent, Colors.red],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'SOS',
-                              style: TextStyle(
-                                fontSize: 48,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 2,
-                              ),
-                            ),
+        ),
+
+        // ── 4. HIGH-URGENCY SECONDARY ACTIONS ────────────────────────────
+        //    Still above-fold, thumb-zone. Share Location & Fake Call.
+        _PrimarySecondaryRow(),
+
+        // ── 5. SCROLLABLE TERTIARY CONTENT ───────────────────────────────
+        Expanded(child: _ScrollZone()),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. Header
+// ─────────────────────────────────────────────────────────────────────────────
+class _Header extends StatelessWidget {
+  final double topPad;
+  final String name;
+  final String? photoUrl;
+  final bool isLoading;
+  final VoidCallback onLogout;
+
+  const _Header({
+    required this.topPad,
+    required this.name,
+    required this.photoUrl,
+    required this.isLoading,
+    required this.onLogout,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _T.headerBg,
+      padding: EdgeInsets.only(
+        top: topPad + 10,
+        bottom: 12,
+        left: 20,
+        right: 16,
+      ),
+      child: Row(
+        children: [
+          _Avatar(photoUrl: photoUrl),
+          const SizedBox(width: 12),
+          Expanded(
+            child: isLoading
+                ? _Shimmer(width: 120, height: 14)
+                : RichText(
+                    text: TextSpan(
+                      style: const TextStyle(color: AppColors.textPrimary),
+                      children: [
+                        TextSpan(
+                          text: 'Hi, $name',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.4,
                           ),
                         ),
-                      ),
+                        const TextSpan(text: '  👋'),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Press and hold for 3 seconds to trigger emergency',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                  ),
-                  const SizedBox(height: 48),
-
-                  // Quick Actions Grid
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ActionCard(
-                          title: 'Live Tracking',
-                          icon: Icons.near_me,
-                          color: AppColors.bluePrimary,
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _ActionCard(
-                          title: 'Fake Call',
-                          icon: Icons.phone_in_talk,
-                          color: AppColors.greenPrimary,
-                          onTap: () {},
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ActionCard(
-                          title: 'Record Audio',
-                          icon: Icons.mic,
-                          color: Colors.purpleAccent,
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _ActionCard(
-                          title: 'Safe Places',
-                          icon: Icons.shield,
-                          color: Colors.orangeAccent,
-                          onTap: () {},
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          )
+          ),
+          _HeaderBtn(icon: Icons.notifications_outlined, onTap: () {}),
+          const SizedBox(width: 6),
+          _HeaderBtn(icon: Icons.logout_rounded, onTap: onLogout),
         ],
       ),
     );
   }
 }
 
-class _ActionCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionCard({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
+class _Avatar extends StatelessWidget {
+  final String? photoUrl;
+  const _Avatar({this.photoUrl});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.roseLight, width: 2),
+      ),
+      child: ClipOval(
+        child: photoUrl != null
+            ? Image.network(photoUrl!, fit: BoxFit.cover)
+            : Container(
+                color: AppColors.roseTint,
+                child: const Icon(Icons.person_rounded,
+                    color: AppColors.rosePrimary, size: 20),
+              ),
+      ),
+    );
+  }
+}
+
+class _HeaderBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _HeaderBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
-          color: color.withAlpha(25),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withAlpha(76)),
+          color: _T.pageBg,
+          shape: BoxShape.circle,
+          border: Border.all(color: _T.cardBorder),
         ),
-        child: Column(
+        child: Icon(icon, size: 18, color: AppColors.textSecondary),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. Ambient Safety Status Banner
+// ─────────────────────────────────────────────────────────────────────────────
+class _StatusBar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _T.headerBg,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: _T.safeBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _T.safeBorder),
+        ),
+        child: Row(
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 12),
+            _PulseDot(color: _T.safeDot),
+            const SizedBox(width: 10),
             Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+              'You\'re safe  ·  3 contacts watching',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _T.safeText,
+                letterSpacing: 0.1,
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () {},
+              child: Text(
+                'Details →',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: _T.safeText,
+                ),
               ),
             ),
           ],
@@ -321,26 +390,809 @@ class _ActionCard extends StatelessWidget {
   }
 }
 
+class _PulseDot extends StatefulWidget {
+  final Color color;
+  const _PulseDot({required this.color});
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+        ..repeat(reverse: true);
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) => Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: widget.color.withAlpha((_c.value * 80 + 175).toInt()),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: widget.color.withAlpha((_c.value * 100).toInt()),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. SOS Hero
+// ─────────────────────────────────────────────────────────────────────────────
+class _SOSHero extends StatelessWidget {
+  final AnimationController pulse;
+  final AnimationController hold;
+  final bool active;
+  const _SOSHero({required this.pulse, required this.hold, required this.active});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          active
+              ? '🚨  Emergency alert sent!'
+              : 'Press & hold 3 s in an emergency',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: active ? AppColors.redPrimary : AppColors.textSecondary,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 22),
+        _SOSButtonCore(pulse: pulse, hold: hold, active: active),
+      ],
+    );
+  }
+}
+
+class _SOSButtonCore extends StatelessWidget {
+  final AnimationController pulse;
+  final AnimationController hold;
+  final bool active;
+  const _SOSButtonCore({required this.pulse, required this.hold, required this.active});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onLongPressStart: (_) {
+        HapticFeedback.mediumImpact();
+        hold.forward();
+      },
+      onLongPressEnd: (_) {
+        if (hold.status != AnimationStatus.completed) hold.reverse();
+      },
+      onLongPressCancel: () => hold.reverse(),
+      child: AnimatedBuilder(
+        animation: Listenable.merge([pulse, hold]),
+        builder: (context, _) {
+          final double pv = pulse.value;
+          final double hv = hold.value;
+
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              // Outer aura — breathes with pulse
+              Container(
+                width: 182 + (pv * 14),
+                height: 182 + (pv * 14),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _T.sosRing2.withAlpha((pv * 50).toInt()),
+                ),
+              ),
+              // Mid ring
+              Container(
+                width: 168,
+                height: 168,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _T.sosRing1.withAlpha((pv * 70 + 20).toInt()),
+                ),
+              ),
+              // Core
+              Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: active
+                        ? [const Color(0xFFEF5350), _T.sosDeep]
+                        : [
+                            Color.lerp(
+                                const Color(0xFFEF5350),
+                                const Color(0xFFE53935),
+                                hv)!,
+                            Color.lerp(_T.sosCore, _T.sosDeep, hv)!,
+                          ],
+                    center: const Alignment(-0.3, -0.3),
+                    radius: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _T.sosCore
+                          .withAlpha((70 + (hv * 110).toInt())),
+                      blurRadius: 22 + (hv * 18),
+                      spreadRadius: 2 + (hv * 6),
+                    ),
+                    const BoxShadow(
+                      color: Color(0x14000000),
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (hv > 0)
+                      SizedBox(
+                        width: 140,
+                        height: 140,
+                        child: CircularProgressIndicator(
+                          value: hv,
+                          strokeWidth: 4,
+                          color: Colors.white.withAlpha(200),
+                          backgroundColor: Colors.transparent,
+                          strokeCap: StrokeCap.round,
+                        ),
+                      ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'SOS',
+                          style: const TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 4,
+                            height: 1,
+                          ),
+                        ),
+                        if (hv > 0.04) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${((1 - hv) * 3).ceil()}s',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. Primary Secondary Actions  (Share Location + Fake Call)
+// ─────────────────────────────────────────────────────────────────────────────
+class _PrimarySecondaryRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: _PillAction(
+              icon: Icons.near_me_rounded,
+              label: 'Share Location',
+              color: _T.act[0][2],
+              bg: _T.act[0][0],
+              onTap: () {},
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _PillAction(
+              icon: Icons.phone_in_talk_rounded,
+              label: 'Fake Call',
+              color: _T.act[1][2],
+              bg: _T.act[1][0],
+              onTap: () {},
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PillAction extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color bg;
+  final VoidCallback onTap;
+  const _PillAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.bg,
+    required this.onTap,
+  });
+  @override
+  State<_PillAction> createState() => _PillActionState();
+}
+
+class _PillActionState extends State<_PillAction>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 90));
+  late final Animation<double> _scale =
+      Tween<double>(begin: 1, end: 0.96).animate(
+    CurvedAnimation(parent: _c, curve: Curves.easeOut),
+  );
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) { _c.forward(); HapticFeedback.selectionClick(); },
+      onTapUp: (_) { _c.reverse(); widget.onTap(); },
+      onTapCancel: () => _c.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            color: widget.bg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: widget.color.withAlpha(40)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(widget.icon, color: widget.color, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: widget.color,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. Scroll Zone  (tertiary — requires intentional scrolling)
+// ─────────────────────────────────────────────────────────────────────────────
+class _ScrollZone extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      physics: const BouncingScrollPhysics(),
+      children: const [
+        _SectionLabel('More Tools'),
+        SizedBox(height: 12),
+        _TertiaryGrid(),
+        SizedBox(height: 24),
+        _SectionLabel('Trusted Contacts'),
+        SizedBox(height: 12),
+        _ContactsPreview(),
+        SizedBox(height: 24),
+        _SectionLabel('Safety Tip'),
+        SizedBox(height: 12),
+        _TipCard(),
+      ],
+    );
+  }
+}
+
+// ── Section label
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 15,
+          decoration: BoxDecoration(
+            color: AppColors.rosePrimary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Tertiary 2-col grid  (Record Audio + Safe Places)
+class _TertiaryGrid extends StatelessWidget {
+  const _TertiaryGrid();
+
+  static const _items = [
+    (Icons.mic_rounded,    'Record Audio', 'Covert background capture', 2),
+    (Icons.shield_rounded, 'Safe Places',  'Nearby verified safe zones', 3),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(_items.length, (i) {
+        final (icon, title, sub, pi) = _items[i];
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(left: i == 0 ? 0 : 6, right: i == 0 ? 6 : 0),
+            child: _TertiaryCard(
+              icon: icon,
+              title: title,
+              sub: sub,
+              palette: _T.act[pi],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _TertiaryCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String sub;
+  final List<Color> palette;
+  const _TertiaryCard({
+    required this.icon,
+    required this.title,
+    required this.sub,
+    required this.palette,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: palette[0],
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: palette[2].withAlpha(35)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: palette[1],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: palette[2], size: 20),
+            ),
+            const SizedBox(height: 12),
+            Text(title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.1,
+                )),
+            const SizedBox(height: 4),
+            Text(sub,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Contacts horizontal scroll
+class _ContactsPreview extends StatelessWidget {
+  const _ContactsPreview();
+
+  static const _contacts = [
+    ('Mum', 'Online'),
+    ('Priya', 'Online'),
+    ('Anjali', '2h ago'),
+    ('Riya', 'Offline'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 88,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _contacts.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          if (i == _contacts.length) return _AddContactBtn();
+          final (name, status) = _contacts[i];
+          return _ContactChip(name: name, status: status);
+        },
+      ),
+    );
+  }
+}
+
+class _ContactChip extends StatelessWidget {
+  final String name;
+  final String status;
+  const _ContactChip({required this.name, required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool online = status == 'Online';
+    return Container(
+      width: 72,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: _T.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _T.cardBorder),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.roseLight,
+                      AppColors.rosePrimary.withAlpha(160)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    name[0],
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              if (online)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: AppColors.greenPrimary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            name,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddContactBtn extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        width: 72,
+        decoration: BoxDecoration(
+          color: AppColors.roseTint,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.rosePrimary.withAlpha(60)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.rosePrimary.withAlpha(20),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add_rounded,
+                  color: AppColors.rosePrimary, size: 20),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Add',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.rosePrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Safety Tip Card (tappable, animated)
+const _kTips = [
+  (Icons.psychology_rounded, 'Trust Your Instincts',
+      'If something feels wrong, it probably is. Leave without explanation.'),
+  (Icons.route_rounded, 'Share Your Route',
+      'Send your live route to a contact before travelling solo.'),
+  (Icons.visibility_rounded, 'Stay Present',
+      'Limit phone use in unfamiliar or isolated areas.'),
+];
+
+class _TipCard extends StatefulWidget {
+  const _TipCard();
+  @override
+  State<_TipCard> createState() => _TipCardState();
+}
+
+class _TipCardState extends State<_TipCard> {
+  int _i = 0;
+  @override
+  Widget build(BuildContext context) {
+    final (icon, title, body) = _kTips[_i];
+    return GestureDetector(
+      onTap: () => setState(() => _i = (_i + 1) % _kTips.length),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, anim) => FadeTransition(
+          opacity: anim,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.04, 0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+            child: child,
+          ),
+        ),
+        child: Container(
+          key: ValueKey(_i),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: _T.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _T.cardBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.roseTint,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: AppColors.rosePrimary, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.1,
+                        )),
+                  ),
+                  Text(
+                    '${_i + 1} / ${_kTips.length}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(body,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    height: 1.55,
+                  )),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(Icons.touch_app_rounded,
+                      size: 12,
+                      color: AppColors.textSecondary.withAlpha(100)),
+                  const SizedBox(width: 5),
+                  Text('Tap for next tip',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary.withAlpha(100),
+                      )),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Utility: Shimmer placeholder
+// ─────────────────────────────────────────────────────────────────────────────
+class _Shimmer extends StatefulWidget {
+  final double width;
+  final double height;
+  const _Shimmer({required this.width, required this.height});
+  @override
+  State<_Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+        ..repeat(reverse: true);
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: Color.lerp(
+            const Color(0xFFEEE0E8),
+            const Color(0xFFF9F0F5),
+            _c.value,
+          ),
+          borderRadius: BorderRadius.circular(widget.height / 2),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Placeholder tabs
+// ─────────────────────────────────────────────────────────────────────────────
 class _ContactsTab extends StatelessWidget {
   const _ContactsTab();
   @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Trusted Contacts'));
-  }
+  Widget build(BuildContext context) =>
+      const _TabPlaceholder(icon: Icons.group_rounded, label: 'Trusted Contacts');
 }
 
 class _MapTab extends StatelessWidget {
   const _MapTab();
   @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Safe Routes Map'));
-  }
+  Widget build(BuildContext context) =>
+      const _TabPlaceholder(icon: Icons.map_rounded, label: 'Safe Routes');
 }
 
 class _ProfileTab extends StatelessWidget {
   const _ProfileTab();
   @override
+  Widget build(BuildContext context) =>
+      const _TabPlaceholder(icon: Icons.person_rounded, label: 'My Profile');
+}
+
+class _TabPlaceholder extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _TabPlaceholder({required this.icon, required this.label});
+
+  @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('User Profile'));
+    return SafeArea(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: AppColors.roseTint,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: AppColors.rosePrimary, size: 30),
+            ),
+            const SizedBox(height: 14),
+            Text(label,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                )),
+            const SizedBox(height: 6),
+            const Text('Coming soon',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                )),
+          ],
+        ),
+      ),
+    );
   }
 }
