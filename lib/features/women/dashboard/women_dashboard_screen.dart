@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
+import 'trusted_contact.dart';
+import 'trusted_contacts_store.dart';
+import 'trusted_contacts_ui.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Local design tokens  (light-mode only, extends AppColors without editing it)
@@ -19,12 +22,6 @@ abstract final class _T {
   static const Color sosDeep      = Color(0xFFB71C1C);
   static const Color sosRing1     = Color(0x26D32F2F);   // 15 %
   static const Color sosRing2     = Color(0x14D32F2F);   // 8 %
-
-  // Status pill
-  static const Color safeText     = Color(0xFF1B6B3A);
-  static const Color safeBg       = Color(0xFFE9F7EE);
-  static const Color safeBorder   = Color(0xFFB2DFCB);
-  static const Color safeDot      = Color(0xFF2E7D32);
 
   // Action cards  [surface, icon-bg, icon-fg]
   static const List<List<Color>> act = [
@@ -48,17 +45,102 @@ class WomenDashboardScreen extends StatefulWidget {
 
 class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
   int _selectedIndex = 0;
-  late final List<Widget> _pages;
+  final TrustedContactsStore _trustedContactsStore = const TrustedContactsStore();
+  List<TrustedContact> _trustedContacts = const [];
+  bool _isLoadingContacts = true;
 
   @override
   void initState() {
     super.initState();
-    _pages = [
-      _HomeTab(onLogout: widget.onLogout),
-      const _ContactsTab(),
-      const _MapTab(),
-      const _ProfileTab(),
-    ];
+    _loadTrustedContacts();
+  }
+
+  Future<void> _loadTrustedContacts() async {
+    final contacts = await _trustedContactsStore.loadContacts();
+    if (!mounted) return;
+    setState(() {
+      _trustedContacts = contacts;
+      _isLoadingContacts = false;
+    });
+  }
+
+  Future<void> _saveTrustedContacts(List<TrustedContact> contacts) async {
+    await _trustedContactsStore.saveContacts(contacts);
+    if (!mounted) return;
+    setState(() => _trustedContacts = contacts);
+  }
+
+  Future<void> _addTrustedContact() async {
+    final newContact = await showAddTrustedContactSheet(context);
+    if (!mounted || newContact == null) return;
+
+    final newPhone = normalizePhoneNumber(newContact.phoneNumber);
+    final alreadyExists = _trustedContacts.any(
+      (contact) => normalizePhoneNumber(contact.phoneNumber) == newPhone,
+    );
+    if (alreadyExists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This phone number is already in trusted contacts.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final updated = [..._trustedContacts, newContact];
+    await _saveTrustedContacts(updated);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${newContact.name} added to trusted contacts.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _removeTrustedContact(TrustedContact contact) async {
+    final shouldRemove = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Remove contact?'),
+            content: Text(
+              'Remove ${contact.name} from your trusted contacts?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.redPrimary,
+                ),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Remove'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!shouldRemove) return;
+
+    final updated = _trustedContacts
+        .where((item) => item.id != contact.id)
+        .toList(growable: false);
+    await _saveTrustedContacts(updated);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${contact.name} removed.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _openContactsTab() {
+    setState(() => _selectedIndex = 1);
   }
 
   @override
@@ -67,7 +149,26 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
       value: SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: _T.pageBg,
-        body: _pages[_selectedIndex],
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: [
+            _HomeTab(
+              onLogout: widget.onLogout,
+              trustedContacts: _trustedContacts,
+              isLoadingContacts: _isLoadingContacts,
+              onAddContact: _addTrustedContact,
+              onOpenContacts: _openContactsTab,
+            ),
+            TrustedContactsTab(
+              contacts: _trustedContacts,
+              isLoading: _isLoadingContacts,
+              onAddContact: _addTrustedContact,
+              onDeleteContact: _removeTrustedContact,
+            ),
+            const _MapTab(),
+            const _ProfileTab(),
+          ],
+        ),
         bottomNavigationBar: _BottomNav(
           selectedIndex: _selectedIndex,
           onChanged: (i) => setState(() => _selectedIndex = i),
@@ -132,7 +233,18 @@ class _BottomNav extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 class _HomeTab extends StatefulWidget {
   final VoidCallback onLogout;
-  const _HomeTab({required this.onLogout});
+  final List<TrustedContact> trustedContacts;
+  final bool isLoadingContacts;
+  final VoidCallback onAddContact;
+  final VoidCallback onOpenContacts;
+
+  const _HomeTab({
+    required this.onLogout,
+    required this.trustedContacts,
+    required this.isLoadingContacts,
+    required this.onAddContact,
+    required this.onOpenContacts,
+  });
 
   @override
   State<_HomeTab> createState() => _HomeTabState();
@@ -207,9 +319,6 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
           onLogout: widget.onLogout,
         ),
 
-        // ── 2. AMBIENT SAFETY STATUS ─────────────────────────────────────
-        _StatusBar(),
-
         // ── 3. ABOVE-THE-FOLD: SOS HERO ──────────────────────────────────
         //    Critical action. Zero scrolling required.
         SizedBox(
@@ -226,7 +335,14 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
         _PrimarySecondaryRow(),
 
         // ── 5. SCROLLABLE TERTIARY CONTENT ───────────────────────────────
-        Expanded(child: _ScrollZone()),
+        Expanded(
+          child: _ScrollZone(
+            trustedContacts: widget.trustedContacts,
+            isLoadingContacts: widget.isLoadingContacts,
+            onAddContact: widget.onAddContact,
+            onOpenContacts: widget.onOpenContacts,
+          ),
+        ),
       ],
     );
   }
@@ -337,92 +453,6 @@ class _HeaderBtn extends StatelessWidget {
           border: Border.all(color: _T.cardBorder),
         ),
         child: Icon(icon, size: 18, color: AppColors.textSecondary),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. Ambient Safety Status Banner
-// ─────────────────────────────────────────────────────────────────────────────
-class _StatusBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: _T.headerBg,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: _T.safeBg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _T.safeBorder),
-        ),
-        child: Row(
-          children: [
-            _PulseDot(color: _T.safeDot),
-            const SizedBox(width: 10),
-            Text(
-              'You\'re safe  ·  3 contacts watching',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: _T.safeText,
-                letterSpacing: 0.1,
-              ),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: () {},
-              child: Text(
-                'Details →',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: _T.safeText,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PulseDot extends StatefulWidget {
-  final Color color;
-  const _PulseDot({required this.color});
-  @override
-  State<_PulseDot> createState() => _PulseDotState();
-}
-
-class _PulseDotState extends State<_PulseDot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
-        ..repeat(reverse: true);
-
-  @override
-  void dispose() { _c.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (_, __) => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: widget.color.withAlpha((_c.value * 80 + 175).toInt()),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: widget.color.withAlpha((_c.value * 100).toInt()),
-              blurRadius: 6,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -694,23 +724,40 @@ class _PillActionState extends State<_PillAction>
 // 5. Scroll Zone  (tertiary — requires intentional scrolling)
 // ─────────────────────────────────────────────────────────────────────────────
 class _ScrollZone extends StatelessWidget {
+  final List<TrustedContact> trustedContacts;
+  final bool isLoadingContacts;
+  final VoidCallback onAddContact;
+  final VoidCallback onOpenContacts;
+
+  const _ScrollZone({
+    required this.trustedContacts,
+    required this.isLoadingContacts,
+    required this.onAddContact,
+    required this.onOpenContacts,
+  });
+
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       physics: const BouncingScrollPhysics(),
-      children: const [
-        _SectionLabel('More Tools'),
-        SizedBox(height: 12),
-        _TertiaryGrid(),
-        SizedBox(height: 24),
-        _SectionLabel('Trusted Contacts'),
-        SizedBox(height: 12),
-        _ContactsPreview(),
-        SizedBox(height: 24),
-        _SectionLabel('Safety Tip'),
-        SizedBox(height: 12),
-        _TipCard(),
+      children: [
+        const _SectionLabel('More Tools'),
+        const SizedBox(height: 12),
+        const _TertiaryGrid(),
+        const SizedBox(height: 24),
+        const _SectionLabel('Trusted Contacts'),
+        const SizedBox(height: 12),
+        TrustedContactsPreview(
+          contacts: trustedContacts,
+          isLoading: isLoadingContacts,
+          onAddContact: onAddContact,
+          onOpenContacts: onOpenContacts,
+        ),
+        const SizedBox(height: 24),
+        const _SectionLabel('Safety Tip'),
+        const SizedBox(height: 12),
+        const _TipCard(),
       ],
     );
   }
@@ -827,154 +874,6 @@ class _TertiaryCard extends StatelessWidget {
                   color: AppColors.textSecondary,
                   height: 1.4,
                 )),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Contacts horizontal scroll
-class _ContactsPreview extends StatelessWidget {
-  const _ContactsPreview();
-
-  static const _contacts = [
-    ('Mum', 'Online'),
-    ('Priya', 'Online'),
-    ('Anjali', '2h ago'),
-    ('Riya', 'Offline'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 88,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _contacts.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, i) {
-          if (i == _contacts.length) return _AddContactBtn();
-          final (name, status) = _contacts[i];
-          return _ContactChip(name: name, status: status);
-        },
-      ),
-    );
-  }
-}
-
-class _ContactChip extends StatelessWidget {
-  final String name;
-  final String status;
-  const _ContactChip({required this.name, required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool online = status == 'Online';
-    return Container(
-      width: 72,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(
-        color: _T.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _T.cardBorder),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.roseLight,
-                      AppColors.rosePrimary.withAlpha(160)
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    name[0],
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              if (online)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: AppColors.greenPrimary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            name,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AddContactBtn extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {},
-      child: Container(
-        width: 72,
-        decoration: BoxDecoration(
-          color: AppColors.roseTint,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.rosePrimary.withAlpha(60)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.rosePrimary.withAlpha(20),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.add_rounded,
-                  color: AppColors.rosePrimary, size: 20),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Add',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.rosePrimary,
-              ),
-            ),
           ],
         ),
       ),
@@ -1116,7 +1015,7 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _c,
-      builder: (_, __) => Container(
+      builder: (_, _) => Container(
         width: widget.width,
         height: widget.height,
         decoration: BoxDecoration(
@@ -1135,13 +1034,6 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
 // ─────────────────────────────────────────────────────────────────────────────
 // Placeholder tabs
 // ─────────────────────────────────────────────────────────────────────────────
-class _ContactsTab extends StatelessWidget {
-  const _ContactsTab();
-  @override
-  Widget build(BuildContext context) =>
-      const _TabPlaceholder(icon: Icons.group_rounded, label: 'Trusted Contacts');
-}
-
 class _MapTab extends StatelessWidget {
   const _MapTab();
   @override
