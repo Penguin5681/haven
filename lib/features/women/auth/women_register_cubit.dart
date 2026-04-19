@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:bloc/bloc.dart';
+import '../../../core/services/auth_service.dart';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 class WomenRegisterState {
@@ -25,6 +28,11 @@ class WomenRegisterState {
   final String password;
   final String confirmPassword;
 
+  // Submission Status
+  final bool isSubmitting;
+  final String? submissionError;
+  final bool isSuccess;
+
   const WomenRegisterState({
     this.step = 0,
     this.aadhaarImagePath,
@@ -40,6 +48,9 @@ class WomenRegisterState {
     this.district = '',
     this.password = '',
     this.confirmPassword = '',
+    this.isSubmitting = false,
+    this.submissionError,
+    this.isSuccess = false,
   });
 
   WomenRegisterState copyWith({
@@ -57,6 +68,9 @@ class WomenRegisterState {
     String? district,
     String? password,
     String? confirmPassword,
+    bool? isSubmitting,
+    String? submissionError,
+    bool? isSuccess,
   }) {
     return WomenRegisterState(
       step: step ?? this.step,
@@ -73,6 +87,11 @@ class WomenRegisterState {
       district: district ?? this.district,
       password: password ?? this.password,
       confirmPassword: confirmPassword ?? this.confirmPassword,
+      isSubmitting: isSubmitting ?? this.isSubmitting,
+      submissionError: submissionError != null && submissionError.isEmpty
+          ? null
+          : submissionError ?? this.submissionError,
+      isSuccess: isSuccess ?? this.isSuccess,
     );
   }
 }
@@ -123,4 +142,45 @@ class WomenRegisterCubit extends Cubit<WomenRegisterState> {
         password: password,
         confirmPassword: confirmPassword,
       ));
+
+  Future<void> submitRegistration() async {
+    if (state.aadhaarNumber == null || state.profilePhotoPath == null) {
+      emit(state.copyWith(submissionError: 'Aadhaar or Profile Photo is missing.'));
+      emit(state.copyWith(submissionError: ''));
+      return;
+    }
+
+    emit(state.copyWith(isSubmitting: true, submissionError: ''));
+
+    try {
+      await AuthService.instance.signup(
+        aadharNumber: state.aadhaarNumber!,
+        fullName: state.name,
+        email: state.email,
+        phoneNumber: state.phone,
+        profilePhoto: File(state.profilePhotoPath!),
+        addressLine: state.address,
+        pincode: state.pincode,
+        state: state.state,
+        district: state.district,
+        password: state.password,
+      );
+      
+      // Attempt auto-login to get the token
+      try {
+        await AuthService.instance.login(state.email, state.password);
+      } catch (e) {
+        debugPrint('Auto-login failed after signup: $e');
+        // We still consider registration a success even if auto-login fails
+      }
+
+      emit(state.copyWith(isSubmitting: false, isSuccess: true));
+    } catch (e, stackTrace) {
+      debugPrint('Registration Error: $e');
+      debugPrint('StackTrace: $stackTrace');
+      String errorMessage = e.toString().replaceAll('Exception: ', '');
+      emit(state.copyWith(isSubmitting: false, submissionError: errorMessage));
+      emit(state.copyWith(submissionError: ''));
+    }
+  }
 }
