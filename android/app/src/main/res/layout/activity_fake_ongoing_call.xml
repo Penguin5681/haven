@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/fake_call_ongoing_bg"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:id="@+id/ongoingCallerBlock"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="56dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/ongoingAvatar"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="@drawable/fake_call_ongoing_avatar_bg"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#FFFFFF"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/ongoingCallerName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Private Contact"
+            android:textColor="#22222A"
+            android:textSize="27sp"
+            android:textStyle="normal" />
+
+        <TextView
+            android:id="@+id/ongoingCallerNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="9999999999"
+            android:textColor="#3E3F49"
+            android:textSize="21sp" />
+
+        <TextView
+            android:id="@+id/ongoingCallTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="00:00"
+            android:textColor="#4B4C57"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ongoingControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="48dp"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageButton
+                    android:id="@+id/ongoingKeypad"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/fake_call_control_circle_bg"
+                    android:contentDescription="Keypad"
+                    android:padding="14dp"
+                    android:src="@android:drawable/ic_dialog_dialer"
+                    android:tint="#F2F4F8" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Keypad"
+                    android:textColor="#5A5B67"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageButton
+                    android:id="@+id/ongoingMute"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/fake_call_control_circle_bg"
+                    android:contentDescription="Mute"
+                    android:padding="14dp"
+                    android:src="@android:drawable/ic_lock_silent_mode"
+                    android:tint="#F2F4F8" />
+
+                <TextView
+                    android:id="@+id/ongoingMuteLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Mute"
+                    android:textColor="#5A5B67"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageButton
+                    android:id="@+id/ongoingSpeaker"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/fake_call_control_circle_bg"
+                    android:contentDescription="Speaker"
+                    android:padding="14dp"
+                    android:src="@android:drawable/ic_lock_silent_mode_off"
+                    android:tint="#F2F4F8" />
+
+                <TextView
+                    android:id="@+id/ongoingSpeakerLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Speaker"
+                    android:textColor="#5A5B67"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <ImageButton
+                    android:id="@+id/ongoingAddCall"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/fake_call_control_circle_bg"
+                    android:contentDescription="Add call"
+                    android:padding="14dp"
+                    android:src="@android:drawable/ic_input_add"
+                    android:tint="#F2F4F8" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Add call"
+                    android:textColor="#5A5B67"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/ongoingEndCall"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/fake_call_end_small_bg"
+            android:contentDescription="End call"
+            android:padding="18dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="#FFFFFF" />
+
+    </LinearLayout>
+
+</RelativeLayout>

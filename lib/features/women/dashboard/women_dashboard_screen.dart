@@ -6,8 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/fake_call_service.dart';
 import 'trusted_contact.dart';
 import 'trusted_contacts_store.dart';
 import 'trusted_contacts_ui.dart';
@@ -284,6 +287,7 @@ class _HomeTabState extends State<_HomeTab>
   bool _isAccessibilityEnabled = false;
   bool _isNotificationEnabled = false;
   bool _isChunkRecording = false;
+  bool _isAngryFatherModeEnabled = false;
   int _recordingElapsedMs = 0;
   String _recordingSaveDirectory = '';
   String _currentChunkPath = '';
@@ -518,7 +522,7 @@ class _HomeTabState extends State<_HomeTab>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Audio recording started in 10-second chunks.'),
+          content: Text('Audio recording started. Splits into 20-second chunks on stop.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -540,6 +544,200 @@ class _HomeTabState extends State<_HomeTab>
       ),
     );
     await _syncAudioRecordingState();
+  }
+
+  Future<void> _handleNormalFakeCall() async {
+    final settings = await FakeCallService.loadSettings();
+    final scheduled = await FakeCallService.scheduleNormalFakeCall(settings);
+    if (!mounted) return;
+
+    if (scheduled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Fake call scheduled in ${settings.normalDelaySeconds}s.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not schedule fake call.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _toggleAngryFatherMode() async {
+    if (_isAngryFatherModeEnabled) {
+      final stopped = await FakeCallService.stopAngryFatherMode();
+      if (!mounted) return;
+      if (stopped) {
+        setState(() => _isAngryFatherModeEnabled = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Angry father mode stopped.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    final settings = await FakeCallService.loadSettings();
+    final started = await FakeCallService.startAngryFatherMode(settings);
+    if (!mounted) return;
+    if (started) {
+      setState(() => _isAngryFatherModeEnabled = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Angry father mode started: ${settings.angryRepeatCount} calls, every ${settings.angryDelaySeconds}s.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not start angry father mode.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _shareLocation() async {
+    if (!mounted) return;
+    
+    // Check location permissions
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permissions are denied')),
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location permissions are permanently denied, we cannot request permissions.')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Fetching location...')),
+    );
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      
+      final String mapUrl = 'https://maps.google.com/?q=${position.latitude},${position.longitude}';
+      final String message = 'I need help! Here is my current location: $mapUrl';
+
+      if (widget.trustedContacts.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No trusted contacts to share location with.')),
+        );
+        return;
+      }
+
+      final List<String> phoneNumbers = widget.trustedContacts.map((c) => c.phoneNumber).toList();
+      final String phonesStr = phoneNumbers.join(',');
+      
+      final Uri smsUri = Uri(
+        scheme: 'sms',
+        path: phonesStr,
+        queryParameters: <String, String>{
+          'body': message,
+        },
+      );
+
+      if (await canLaunchUrl(smsUri)) {
+        await launchUrl(smsUri);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open SMS app')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _openFakeCallActionSheet() async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Fake Calling',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Runs using your configured delays from Settings.',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: const Color(0xFFF0FDF4),
+                leading: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF15803D)),
+                title: const Text('Normal Fake Call'),
+                subtitle: const Text('Single delayed call'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _handleNormalFakeCall();
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: const Color(0xFFFFF7ED),
+                leading: Icon(
+                  _isAngryFatherModeEnabled ? Icons.pause_circle_filled : Icons.record_voice_over_rounded,
+                  color: const Color(0xFFB45309),
+                ),
+                title: Text(
+                  _isAngryFatherModeEnabled ? 'Stop Angry Father Mode' : 'Start Angry Father Mode',
+                ),
+                subtitle: const Text('Repeated delayed fake calls'),
+                onTap: () async {
+                  Navigator.of(context).pop();
+                  await _toggleAngryFatherMode();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   bool get _isProfileComplete {
@@ -575,7 +773,11 @@ class _HomeTabState extends State<_HomeTab>
               active: _sosActive,
             ),
           ),
-          _PrimarySecondaryRow(),
+          _PrimarySecondaryRow(
+            onFakeCallTap: _openFakeCallActionSheet,
+            onShareLocationTap: _shareLocation,
+            isAngryFatherModeEnabled: _isAngryFatherModeEnabled,
+          ),
           _SosSetupStatusCard(
             isLoading: _isCheckingSosSetup,
             accessibilityEnabled: _isAccessibilityEnabled,
@@ -880,6 +1082,16 @@ class _SOSButtonCore extends StatelessWidget {
 // 4. Primary Secondary Actions  (Share Location + Fake Call)
 // ─────────────────────────────────────────────────────────────────────────────
 class _PrimarySecondaryRow extends StatelessWidget {
+  final VoidCallback onFakeCallTap;
+  final VoidCallback onShareLocationTap;
+  final bool isAngryFatherModeEnabled;
+
+  const _PrimarySecondaryRow({
+    required this.onFakeCallTap,
+    required this.onShareLocationTap,
+    required this.isAngryFatherModeEnabled,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -892,17 +1104,19 @@ class _PrimarySecondaryRow extends StatelessWidget {
               label: 'Share Location',
               color: _T.act[0][2],
               bg: _T.act[0][0],
-              onTap: () {},
+              onTap: onShareLocationTap,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: _PillAction(
-              icon: Icons.phone_in_talk_rounded,
-              label: 'Fake Call',
+              icon: isAngryFatherModeEnabled
+                  ? Icons.record_voice_over_rounded
+                  : Icons.phone_in_talk_rounded,
+              label: isAngryFatherModeEnabled ? 'Angry Mode On' : 'Fake Call',
               color: _T.act[1][2],
               bg: _T.act[1][0],
-              onTap: () {},
+              onTap: onFakeCallTap,
             ),
           ),
         ],

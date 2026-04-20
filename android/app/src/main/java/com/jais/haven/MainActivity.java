@@ -23,8 +23,10 @@ import io.flutter.plugin.common.MethodChannel;
 public class MainActivity extends FlutterActivity {
 	private static final String SOS_SETUP_CHANNEL = "haven/sos_setup";
 	private static final String AUDIO_CHUNK_CHANNEL = "haven/audio_chunks";
+	private static final String FAKE_CALL_CHANNEL = "haven/fake_call";
 
 	private MediaPlayer chunkPlayer;
+	private boolean angryFatherRunning = false;
 
 	@Override
 	public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
@@ -67,6 +69,34 @@ public class MainActivity extends FlutterActivity {
 						}
 						case "stopChunkAudio":
 							result.success(stopChunkAudio());
+							break;
+						default:
+							result.notImplemented();
+							break;
+					}
+				});
+
+		new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), FAKE_CALL_CHANNEL)
+				.setMethodCallHandler((call, result) -> {
+					switch (call.method) {
+						case "scheduleNormalFakeCall": {
+							Integer delay = call.argument("delaySeconds");
+							String phoneNumber = call.argument("phoneNumber");
+							result.success(scheduleNormalFakeCall(delay, phoneNumber));
+							break;
+						}
+						case "startAngryFatherMode": {
+							Integer delay = call.argument("delaySeconds");
+							Integer repeatCount = call.argument("repeatCount");
+							String phoneNumber = call.argument("phoneNumber");
+							result.success(startAngryFatherMode(delay, repeatCount, phoneNumber));
+							break;
+						}
+						case "stopAngryFatherMode":
+							result.success(stopAngryFatherMode());
+							break;
+						case "isAngryFatherModeRunning":
+							result.success(angryFatherRunning);
 							break;
 						default:
 							result.notImplemented();
@@ -266,6 +296,43 @@ public class MainActivity extends FlutterActivity {
 				return false;
 			}
 			startActivity(intent);
+			return true;
+		} catch (Exception ignored) {
+			return false;
+		}
+	}
+
+	private boolean scheduleNormalFakeCall(Integer delaySeconds, String phoneNumber) {
+		try {
+			return FakeCallScheduler.scheduleNormalCall(
+					this,
+					delaySeconds == null ? 10 : Math.max(1, delaySeconds),
+					phoneNumber
+			);
+		} catch (Exception ignored) {
+			return false;
+		}
+	}
+
+	private boolean startAngryFatherMode(Integer delaySeconds, Integer repeatCount, String phoneNumber) {
+		try {
+			final boolean started = FakeCallScheduler.startAngryFatherMode(
+					this,
+					delaySeconds == null ? 20 : Math.max(1, delaySeconds),
+					repeatCount == null ? 3 : Math.max(1, repeatCount),
+					phoneNumber
+			);
+			angryFatherRunning = started;
+			return started;
+		} catch (Exception ignored) {
+			return false;
+		}
+	}
+
+	private boolean stopAngryFatherMode() {
+		try {
+			FakeCallScheduler.cancelAngryFatherMode(this);
+			angryFatherRunning = false;
 			return true;
 		} catch (Exception ignored) {
 			return false;

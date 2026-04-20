@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/services/aadhaar_ocr_service.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_colors.dart';
+import 'fake_call_settings_screen.dart';
 
 class WomenProfileTab extends StatefulWidget {
   final ValueChanged<Map<String, dynamic>>? onProfileUpdated;
@@ -381,7 +382,7 @@ class _WomenProfileTabState extends State<WomenProfileTab> {
   Future<void> _openSettingsPlaceholder() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => const _ProfileSettingsPlaceholderScreen(),
+        builder: (_) => const FakeCallSettingsScreen(),
       ),
     );
   }
@@ -805,27 +806,6 @@ class _SectionSaveAction extends StatelessWidget {
 }
 
 enum _ProfileSection { identity, contact, address }
-
-class _ProfileSettingsPlaceholderScreen extends StatelessWidget {
-  const _ProfileSettingsPlaceholderScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: const Center(
-        child: Text(
-          'Settings placeholder',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _CircularCropPage extends StatefulWidget {
   final Uint8List imageBytes;
