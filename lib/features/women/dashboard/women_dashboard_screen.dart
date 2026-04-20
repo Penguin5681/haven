@@ -6,6 +6,7 @@ import '../../../core/services/auth_service.dart';
 import 'trusted_contact.dart';
 import 'trusted_contacts_store.dart';
 import 'trusted_contacts_ui.dart';
+import 'women_profile_tab.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Local design tokens  (light-mode only, extends AppColors without editing it)
@@ -45,6 +46,7 @@ class WomenDashboardScreen extends StatefulWidget {
 
 class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
   int _selectedIndex = 0;
+  int _homeRefreshToken = 0;
   final TrustedContactsStore _trustedContactsStore = const TrustedContactsStore();
   List<TrustedContact> _trustedContacts = const [];
   bool _isLoadingContacts = true;
@@ -143,6 +145,17 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
     setState(() => _selectedIndex = 1);
   }
 
+  void _openProfileTab() {
+    setState(() => _selectedIndex = 3);
+  }
+
+  void _handleProfileUpdated(Map<String, dynamic> _) {
+    setState(() {
+      _homeRefreshToken++;
+      _selectedIndex = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -153,11 +166,13 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
           index: _selectedIndex,
           children: [
             _HomeTab(
+              key: ValueKey(_homeRefreshToken),
               onLogout: widget.onLogout,
               trustedContacts: _trustedContacts,
               isLoadingContacts: _isLoadingContacts,
               onAddContact: _addTrustedContact,
               onOpenContacts: _openContactsTab,
+              onOpenProfile: _openProfileTab,
             ),
             TrustedContactsTab(
               contacts: _trustedContacts,
@@ -166,7 +181,7 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
               onDeleteContact: _removeTrustedContact,
             ),
             const _MapTab(),
-            const _ProfileTab(),
+            WomenProfileTab(onProfileUpdated: _handleProfileUpdated),
           ],
         ),
         bottomNavigationBar: _BottomNav(
@@ -237,13 +252,16 @@ class _HomeTab extends StatefulWidget {
   final bool isLoadingContacts;
   final VoidCallback onAddContact;
   final VoidCallback onOpenContacts;
+  final VoidCallback onOpenProfile;
 
   const _HomeTab({
+    super.key,
     required this.onLogout,
     required this.trustedContacts,
     required this.isLoadingContacts,
     required this.onAddContact,
     required this.onOpenContacts,
+    required this.onOpenProfile,
   });
 
   @override
@@ -301,6 +319,12 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
     }
   }
 
+  bool get _isProfileComplete {
+    final profile = _profile;
+    if (profile == null) return true;
+    return AuthService.instance.isProfileComplete(profile);
+  }
+
   @override
   Widget build(BuildContext context) {
     final h = MediaQuery.of(context).size.height;
@@ -333,6 +357,9 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
         // ── 4. HIGH-URGENCY SECONDARY ACTIONS ────────────────────────────
         //    Still above-fold, thumb-zone. Share Location & Fake Call.
         _PrimarySecondaryRow(),
+
+        if (!_isLoadingProfile && !_isProfileComplete)
+          _IncompleteProfilePrompt(onTap: widget.onOpenProfile),
 
         // ── 5. SCROLLABLE TERTIARY CONTENT ───────────────────────────────
         Expanded(
@@ -649,6 +676,48 @@ class _PrimarySecondaryRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _IncompleteProfilePrompt extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _IncompleteProfilePrompt({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFFFD6A8)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: Color(0xFFB45309)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Your profile is incomplete. Tap to add missing details.',
+                  style: TextStyle(
+                    color: Color(0xFF92400E),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: Color(0xFF92400E)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1039,13 +1108,6 @@ class _MapTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       const _TabPlaceholder(icon: Icons.map_rounded, label: 'Safe Routes');
-}
-
-class _ProfileTab extends StatelessWidget {
-  const _ProfileTab();
-  @override
-  Widget build(BuildContext context) =>
-      const _TabPlaceholder(icon: Icons.person_rounded, label: 'My Profile');
 }
 
 class _TabPlaceholder extends StatelessWidget {
