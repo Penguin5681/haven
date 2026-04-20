@@ -54,7 +54,10 @@ public class FakeOngoingCallActivity extends Activity {
 
         setContentView(R.layout.activity_fake_ongoing_call);
 
-        String caller = FakeCallUiManager.normalizeCaller(
+        String callerName = FakeCallUiManager.normalizeCaller(
+                getIntent().getStringExtra(FakeCallUiManager.EXTRA_CALLER_NAME)
+        );
+        String callerNumber = FakeCallUiManager.normalizeCaller(
                 getIntent().getStringExtra(FakeCallUiManager.EXTRA_CALLER_NUMBER)
         );
 
@@ -66,8 +69,8 @@ public class FakeOngoingCallActivity extends Activity {
         muteLabel = findViewById(R.id.ongoingMuteLabel);
         speakerLabel = findViewById(R.id.ongoingSpeakerLabel);
 
-        callerNameView.setText("Private Contact");
-        callerNumberView.setText(caller);
+        callerNameView.setText(callerName);
+        callerNumberView.setText(callerNumber);
         callTimerView.setText("00:00");
 
         findViewById(R.id.ongoingEndCall).setOnClickListener(v -> finish());
@@ -108,7 +111,7 @@ public class FakeOngoingCallActivity extends Activity {
         muteButton.setSelected(muted);
         speakerButton.setSelected(speakerOn);
 
-        muteLabel.setTextColor(muted ? 0xFF20222A : 0xFF5A5B67);
-        speakerLabel.setTextColor(speakerOn ? 0xFF20222A : 0xFF5A5B67);
+        muteLabel.setTextColor(muted ? 0xFFFFFFFF : 0xFFA0A0A0);
+        speakerLabel.setTextColor(speakerOn ? 0xFFFFFFFF : 0xFFA0A0A0);
     }
 }

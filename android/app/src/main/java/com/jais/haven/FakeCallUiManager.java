@@ -12,6 +12,7 @@ import androidx.core.app.NotificationManagerCompat;
 
 public final class FakeCallUiManager {
 
+    public static final String EXTRA_CALLER_NAME = "extra_caller_name";
     public static final String EXTRA_CALLER_NUMBER = "extra_caller_number";
     public static final String ACTION_ACCEPT = "com.jais.haven.action.FAKE_CALL_ACCEPT";
     public static final String ACTION_DECLINE = "com.jais.haven.action.FAKE_CALL_DECLINE";
@@ -22,8 +23,9 @@ public final class FakeCallUiManager {
     private FakeCallUiManager() {
     }
 
-    public static void showIncomingCall(Context context, String callerNumber) {
-        String normalized = normalizeCaller(callerNumber);
+    public static void showIncomingCall(Context context, String callerName, String callerNumber) {
+        String normalizedName = normalizeCaller(callerName);
+        String normalizedNum = normalizeCaller(callerNumber);
         createChannel(context);
 
         Intent fullScreenIntent = new Intent(context, FakeIncomingCallActivity.class);
@@ -32,7 +34,8 @@ public final class FakeCallUiManager {
                         | Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP
         );
-        fullScreenIntent.putExtra(EXTRA_CALLER_NUMBER, normalized);
+        fullScreenIntent.putExtra(EXTRA_CALLER_NAME, normalizedName);
+        fullScreenIntent.putExtra(EXTRA_CALLER_NUMBER, normalizedNum);
 
         PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(
                 context,
@@ -43,7 +46,8 @@ public final class FakeCallUiManager {
 
         Intent acceptIntent = new Intent(context, FakeCallActionReceiver.class);
         acceptIntent.setAction(ACTION_ACCEPT);
-        acceptIntent.putExtra(EXTRA_CALLER_NUMBER, normalized);
+        acceptIntent.putExtra(EXTRA_CALLER_NAME, normalizedName);
+        acceptIntent.putExtra(EXTRA_CALLER_NUMBER, normalizedNum);
         PendingIntent acceptPendingIntent = PendingIntent.getBroadcast(
                 context,
                 1002,
@@ -53,7 +57,8 @@ public final class FakeCallUiManager {
 
         Intent declineIntent = new Intent(context, FakeCallActionReceiver.class);
         declineIntent.setAction(ACTION_DECLINE);
-        declineIntent.putExtra(EXTRA_CALLER_NUMBER, normalized);
+        declineIntent.putExtra(EXTRA_CALLER_NAME, normalizedName);
+        declineIntent.putExtra(EXTRA_CALLER_NUMBER, normalizedNum);
         PendingIntent declinePendingIntent = PendingIntent.getBroadcast(
                 context,
                 1003,
@@ -63,8 +68,8 @@ public final class FakeCallUiManager {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("Incoming call")
-                .setContentText(normalized)
+                .setContentTitle(normalizedName)
+                .setContentText("Incoming call")
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -90,27 +95,29 @@ public final class FakeCallUiManager {
         }
 
         // Force immediate UI appearance while keeping full-screen notification fallback.
-        startIncomingActivity(context, normalized);
+        startIncomingActivity(context, normalizedName, normalizedNum);
     }
 
-    public static void startIncomingActivity(Context context, String callerNumber) {
+    public static void startIncomingActivity(Context context, String callerName, String callerNumber) {
         Intent incomingIntent = new Intent(context, FakeIncomingCallActivity.class);
         incomingIntent.addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK
                         | Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP
         );
+        incomingIntent.putExtra(EXTRA_CALLER_NAME, normalizeCaller(callerName));
         incomingIntent.putExtra(EXTRA_CALLER_NUMBER, normalizeCaller(callerNumber));
         context.startActivity(incomingIntent);
     }
 
-    public static void startOngoingActivity(Context context, String callerNumber) {
+    public static void startOngoingActivity(Context context, String callerName, String callerNumber) {
         Intent ongoingIntent = new Intent(context, FakeOngoingCallActivity.class);
         ongoingIntent.addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK
                         | Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP
         );
+        ongoingIntent.putExtra(EXTRA_CALLER_NAME, normalizeCaller(callerName));
         ongoingIntent.putExtra(EXTRA_CALLER_NUMBER, normalizeCaller(callerNumber));
         context.startActivity(ongoingIntent);
     }

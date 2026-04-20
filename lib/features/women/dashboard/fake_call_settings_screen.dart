@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../../core/services/fake_call_service.dart';
 import '../../../core/theme/app_colors.dart';
+import 'trusted_contact.dart';
+import 'trusted_contacts_store.dart';
 
 class FakeCallSettingsScreen extends StatefulWidget {
   const FakeCallSettingsScreen({super.key});
@@ -17,10 +19,15 @@ class _FakeCallSettingsScreenState extends State<FakeCallSettingsScreen> {
   final _normalDelayCtrl = TextEditingController();
   final _angryDelayCtrl = TextEditingController();
   final _angryRepeatCtrl = TextEditingController();
+  final _callerNameCtrl = TextEditingController();
   final _callerNumberCtrl = TextEditingController();
+  String? _selectedTrustedContactId;
 
   bool _isLoading = true;
   bool _isSaving = false;
+  
+  List<TrustedContact> _trustedContacts = [];
+  final TrustedContactsStore _trustedContactsStore = const TrustedContactsStore();
 
   @override
   void initState() {
@@ -39,12 +46,22 @@ class _FakeCallSettingsScreenState extends State<FakeCallSettingsScreen> {
 
   Future<void> _loadSettings() async {
     final settings = await FakeCallService.loadSettings();
+    final contacts = await _trustedContactsStore.loadContacts();
     if (!mounted) return;
 
     _normalDelayCtrl.text = settings.normalDelaySeconds.toString();
     _angryDelayCtrl.text = settings.angryDelaySeconds.toString();
     _angryRepeatCtrl.text = settings.angryRepeatCount.toString();
+    _callerNameCtrl.text = settings.fakeCallerName;
     _callerNumberCtrl.text = settings.fakeCallerNumber;
+    _trustedContacts = contacts;
+    _selectedTrustedContactId = settings.trustedContactId;
+    
+    // Validate if the selected trusted contact still exists
+    if (_selectedTrustedContactId != null &&
+        !_trustedContacts.any((c) => c.id == _selectedTrustedContactId)) {
+      _selectedTrustedContactId = null;
+    }
 
     setState(() => _isLoading = false);
   }
@@ -59,7 +76,9 @@ class _FakeCallSettingsScreenState extends State<FakeCallSettingsScreen> {
         normalDelaySeconds: int.parse(_normalDelayCtrl.text.trim()),
         angryDelaySeconds: int.parse(_angryDelayCtrl.text.trim()),
         angryRepeatCount: int.parse(_angryRepeatCtrl.text.trim()),
+        fakeCallerName: _callerNameCtrl.text.trim(),
         fakeCallerNumber: _callerNumberCtrl.text.trim(),
+        trustedContactId: _selectedTrustedContactId,
       );
 
       await FakeCallService.saveSettings(settings);
@@ -170,19 +189,108 @@ class _FakeCallSettingsScreenState extends State<FakeCallSettingsScreen> {
               const SizedBox(height: 12),
               _SettingsSection(
                 title: 'Caller Identity',
-                subtitle: 'Number displayed when the fake incoming call appears.',
+                subtitle: 'Name and number displayed when the fake incoming call appears.',
                 children: [
-                  _settingsField(
+                  if (_trustedContacts.isNotEmpty) ...[
+                    DropdownButtonFormField<String?>(
+                      value: _selectedTrustedContactId,
+                      dropdownColor: Colors.white,
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                      decoration: InputDecoration(
+                        labelText: 'Select from Trusted Contacts',
+                        labelStyle: const TextStyle(color: AppColors.textSecondary),
+                        prefixIcon: const Icon(Icons.group_outlined, color: AppColors.textSecondary),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE8DDE6)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Color(0xFFE8DDE6)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppColors.rosePrimary.withAlpha(120)),
+                        ),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Custom details'),
+                        ),
+                        ..._trustedContacts.map((contact) {
+                          return DropdownMenuItem<String?>(
+                            value: contact.id,
+                            child: Text('${contact.name} (${contact.phoneNumber})'),
+                          );
+                        }),
+                      ],
+                      onChanged: (contactId) {
+                        setState(() {
+                          _selectedTrustedContactId = contactId;
+                          if (contactId != null) {
+                            final contact = _trustedContacts.firstWhere((c) => c.id == contactId);
+                            _callerNameCtrl.text = contact.name;
+                            _callerNumberCtrl.text = contact.phoneNumber;
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Or enter custom details below:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  TextFormField(
+                    controller: _callerNameCtrl,
+                    maxLength: 30,
+                    enabled: _selectedTrustedContactId == null,
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) return 'Caller name is required';
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      counterText: '',
+                      labelText: 'Caller Name',
+                      prefixIcon: const Icon(Icons.person_outline_rounded),
+                      filled: _selectedTrustedContactId != null,
+                      fillColor: _selectedTrustedContactId != null ? Colors.grey.shade100 : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
                     controller: _callerNumberCtrl,
-                    label: 'Caller number',
-                    icon: Icons.phone_android_outlined,
+                    keyboardType: TextInputType.number,
                     maxLength: 15,
+                    enabled: _selectedTrustedContactId == null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+                    ],
                     validator: (value) {
                       final text = value?.trim() ?? '';
                       if (text.isEmpty) return 'Caller number is required';
                       if (text.length < 7) return 'Number looks too short';
                       return null;
                     },
+                    decoration: InputDecoration(
+                      counterText: '',
+                      labelText: 'Caller number',
+                      prefixIcon: const Icon(Icons.phone_android_outlined),
+                      filled: _selectedTrustedContactId != null,
+                      fillColor: _selectedTrustedContactId != null ? Colors.grey.shade100 : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ],
               ),

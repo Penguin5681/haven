@@ -652,7 +652,16 @@ class _HomeTabState extends State<_HomeTab>
         return;
       }
 
-      final List<String> phoneNumbers = widget.trustedContacts.map((c) => c.phoneNumber).toList();
+      final List<String> phoneNumbers = widget.trustedContacts.map((c) {
+        String num = c.phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+        if (num.length == 10 && !num.startsWith('+')) {
+          num = '+91$num'; // Append default country code for India
+        }
+        return num;
+      }).toList();
+      
+      // WhatsApp does not support multiple comma-separated numbers in SMS intents well.
+      // However, making sure they have the country code is the main issue.
       final String phonesStr = phoneNumbers.join(',');
       
       final Uri smsUri = Uri(
@@ -1251,7 +1260,7 @@ class _SosSetupStatusCard extends StatelessWidget {
                         child: OutlinedButton.icon(
                           onPressed: onOpenAccessibilitySettings,
                           icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                          label: const Text('Accessibility'),
+                          label: const Text('Accessibility', style: TextStyle(fontSize: 12.5),),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF1D4ED8),
                             side: const BorderSide(color: Color(0xFF93C5FD)),

@@ -81,15 +81,17 @@ public class MainActivity extends FlutterActivity {
 					switch (call.method) {
 						case "scheduleNormalFakeCall": {
 							Integer delay = call.argument("delaySeconds");
+							String callerName = call.argument("callerName");
 							String phoneNumber = call.argument("phoneNumber");
-							result.success(scheduleNormalFakeCall(delay, phoneNumber));
+							result.success(scheduleNormalFakeCall(delay, callerName, phoneNumber));
 							break;
 						}
 						case "startAngryFatherMode": {
 							Integer delay = call.argument("delaySeconds");
 							Integer repeatCount = call.argument("repeatCount");
+							String callerName = call.argument("callerName");
 							String phoneNumber = call.argument("phoneNumber");
-							result.success(startAngryFatherMode(delay, repeatCount, phoneNumber));
+							result.success(startAngryFatherMode(delay, repeatCount, callerName, phoneNumber));
 							break;
 						}
 						case "stopAngryFatherMode":
@@ -302,11 +304,12 @@ public class MainActivity extends FlutterActivity {
 		}
 	}
 
-	private boolean scheduleNormalFakeCall(Integer delaySeconds, String phoneNumber) {
+	private boolean scheduleNormalFakeCall(Integer delaySeconds, String callerName, String phoneNumber) {
 		try {
 			return FakeCallScheduler.scheduleNormalCall(
 					this,
 					delaySeconds == null ? 10 : Math.max(1, delaySeconds),
+					callerName,
 					phoneNumber
 			);
 		} catch (Exception ignored) {
@@ -314,12 +317,13 @@ public class MainActivity extends FlutterActivity {
 		}
 	}
 
-	private boolean startAngryFatherMode(Integer delaySeconds, Integer repeatCount, String phoneNumber) {
+	private boolean startAngryFatherMode(Integer delaySeconds, Integer repeatCount, String callerName, String phoneNumber) {
 		try {
 			final boolean started = FakeCallScheduler.startAngryFatherMode(
 					this,
 					delaySeconds == null ? 20 : Math.max(1, delaySeconds),
 					repeatCount == null ? 3 : Math.max(1, repeatCount),
+					callerName,
 					phoneNumber
 			);
 			angryFatherRunning = started;

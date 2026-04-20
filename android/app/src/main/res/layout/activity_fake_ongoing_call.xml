@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:text="Private Contact"
-            android:textColor="#22222A"
+            android:textColor="#FFFFFF"
             android:textSize="27sp"
             android:textStyle="normal" />
 
@@ -39,7 +39,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="9999999999"
-            android:textColor="#3E3F49"
+            android:textColor="#A0A0A0"
             android:textSize="21sp" />
 
         <TextView
@@ -48,8 +48,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:text="00:00"
-            android:textColor="#4B4C57"
-            android:textSize="13sp" />
+            android:textColor="#A0A0A0"
+            android:textSize="14sp" />
     </LinearLayout>
 
     <LinearLayout
@@ -89,8 +89,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Keypad"
-                    android:textColor="#5A5B67"
-                    android:textSize="10sp" />
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -116,8 +116,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Mute"
-                    android:textColor="#5A5B67"
-                    android:textSize="10sp" />
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -143,8 +143,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Speaker"
-                    android:textColor="#5A5B67"
-                    android:textSize="10sp" />
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -168,8 +168,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Add call"
-                    android:textColor="#5A5B67"
-                    android:textSize="10sp" />
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
 

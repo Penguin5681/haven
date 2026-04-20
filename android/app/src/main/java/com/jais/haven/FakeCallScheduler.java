@@ -14,7 +14,7 @@ public final class FakeCallScheduler {
 
     private FakeCallScheduler() {}
 
-    public static boolean scheduleNormalCall(Context context, int delaySeconds, String phoneNumber) {
+    public static boolean scheduleNormalCall(Context context, int delaySeconds, String callerName, String phoneNumber) {
         cancelNormalCall(context);
         long triggerAt = SystemClock.elapsedRealtime() + Math.max(1, delaySeconds) * 1000L;
         PendingIntent pendingIntent = buildPendingIntent(
@@ -23,6 +23,7 @@ public final class FakeCallScheduler {
                 FakeCallAlarmReceiver.MODE_NORMAL,
                 Math.max(0, delaySeconds),
                 1,
+                normalizeName(callerName),
                 normalizePhone(phoneNumber)
         );
             return scheduleAlarm(context, triggerAt, pendingIntent);
@@ -32,6 +33,7 @@ public final class FakeCallScheduler {
             Context context,
             int delaySeconds,
             int repeatCount,
+            String callerName,
             String phoneNumber
     ) {
         cancelAngryFatherMode(context);
@@ -43,6 +45,7 @@ public final class FakeCallScheduler {
                 FakeCallAlarmReceiver.MODE_ANGRY,
                 Math.max(1, delaySeconds),
                 safeRepeatCount,
+                normalizeName(callerName),
                 normalizePhone(phoneNumber)
         );
             return scheduleAlarm(context, triggerAt, pendingIntent);
@@ -55,6 +58,7 @@ public final class FakeCallScheduler {
                 FakeCallAlarmReceiver.MODE_NORMAL,
                 0,
                 0,
+                "",
                 ""
         );
         cancelPendingIntent(context, pendingIntent);
@@ -67,6 +71,7 @@ public final class FakeCallScheduler {
                 FakeCallAlarmReceiver.MODE_ANGRY,
                 0,
                 0,
+                "",
                 ""
         );
         cancelPendingIntent(context, pendingIntent);
@@ -78,6 +83,7 @@ public final class FakeCallScheduler {
             String mode,
             int delaySeconds,
             int remainingCount,
+            String callerName,
             String phoneNumber
     ) {
         Intent intent = new Intent(context, FakeCallAlarmReceiver.class);
@@ -85,6 +91,7 @@ public final class FakeCallScheduler {
         intent.putExtra(FakeCallAlarmReceiver.EXTRA_MODE, mode);
         intent.putExtra(FakeCallAlarmReceiver.EXTRA_DELAY_SECONDS, delaySeconds);
         intent.putExtra(FakeCallAlarmReceiver.EXTRA_REMAINING_COUNT, remainingCount);
+        intent.putExtra(FakeCallAlarmReceiver.EXTRA_CALLER_NAME, callerName);
         intent.putExtra(FakeCallAlarmReceiver.EXTRA_PHONE_NUMBER, phoneNumber);
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -145,6 +152,14 @@ public final class FakeCallScheduler {
             alarmManager.cancel(pendingIntent);
         }
         pendingIntent.cancel();
+    }
+
+    private static String normalizeName(String callerName) {
+        if (callerName == null) {
+            return "";
+        }
+        String normalized = callerName.trim();
+        return normalized.isEmpty() ? "Private Contact" : normalized;
     }
 
     private static String normalizePhone(String phoneNumber) {

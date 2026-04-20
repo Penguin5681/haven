@@ -15,6 +15,7 @@ public class FakeCallAlarmReceiver extends BroadcastReceiver {
     public static final String EXTRA_MODE = "mode";
     public static final String EXTRA_DELAY_SECONDS = "delay_seconds";
     public static final String EXTRA_REMAINING_COUNT = "remaining_count";
+    public static final String EXTRA_CALLER_NAME = "caller_name";
     public static final String EXTRA_PHONE_NUMBER = "phone_number";
 
     @Override
@@ -26,22 +27,32 @@ public class FakeCallAlarmReceiver extends BroadcastReceiver {
         String mode = intent.getStringExtra(EXTRA_MODE);
         int delaySeconds = intent.getIntExtra(EXTRA_DELAY_SECONDS, 10);
         int remainingCount = intent.getIntExtra(EXTRA_REMAINING_COUNT, 1);
+        String callerName = intent.getStringExtra(EXTRA_CALLER_NAME);
         String phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER);
 
-        triggerCall(context, phoneNumber);
+        triggerCall(context, callerName, phoneNumber);
 
         if (MODE_ANGRY.equals(mode) && remainingCount > 1) {
             FakeCallScheduler.startAngryFatherMode(
                     context,
                     Math.max(1, delaySeconds),
                     remainingCount - 1,
+                    callerName,
                     phoneNumber
             );
         }
     }
 
-    private void triggerCall(Context context, String phoneNumber) {
-        FakeCallUiManager.showIncomingCall(context, normalizePhone(phoneNumber));
+    private void triggerCall(Context context, String callerName, String phoneNumber) {
+        FakeCallUiManager.showIncomingCall(context, normalizeName(callerName), normalizePhone(phoneNumber));
+    }
+
+    private String normalizeName(String callerName) {
+        if (callerName == null) {
+            return "Private Contact";
+        }
+        String normalized = callerName.trim();
+        return normalized.isEmpty() ? "Private Contact" : normalized;
     }
 
     private String normalizePhone(String phoneNumber) {

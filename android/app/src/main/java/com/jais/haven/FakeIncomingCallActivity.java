@@ -1,6 +1,7 @@
 package com.jais.haven;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -36,12 +37,18 @@ public class FakeIncomingCallActivity extends Activity {
 
         setContentView(R.layout.activity_fake_incoming_call);
 
-        String caller = FakeCallUiManager.normalizeCaller(
+        String callerName = FakeCallUiManager.normalizeCaller(
+                getIntent().getStringExtra(FakeCallUiManager.EXTRA_CALLER_NAME)
+        );
+        String callerNumber = FakeCallUiManager.normalizeCaller(
                 getIntent().getStringExtra(FakeCallUiManager.EXTRA_CALLER_NUMBER)
         );
 
-        TextView callerNumber = findViewById(R.id.incomingCallerNumber);
-        callerNumber.setText(caller);
+        TextView callerNameView = findViewById(R.id.incomingCallerName);
+        callerNameView.setText(callerName);
+
+        TextView callerNumberView = findViewById(R.id.incomingCallerNumber);
+        callerNumberView.setText(callerNumber);
 
         findViewById(R.id.incomingDecline).setOnClickListener(v -> {
             stopAlerting();
@@ -52,14 +59,14 @@ public class FakeIncomingCallActivity extends Activity {
         findViewById(R.id.incomingAccept).setOnClickListener(v -> {
             stopAlerting();
             FakeCallUiManager.cancelIncomingNotification(this);
-            FakeCallUiManager.startOngoingActivity(this, caller);
+            FakeCallUiManager.startOngoingActivity(this, callerName, callerNumber);
             finish();
         });
 
         findViewById(R.id.incomingAnswer).setOnClickListener(v -> {
             stopAlerting();
             FakeCallUiManager.cancelIncomingNotification(this);
-            FakeCallUiManager.startOngoingActivity(this, caller);
+            FakeCallUiManager.startOngoingActivity(this, callerName, callerNumber);
             finish();
         });
 

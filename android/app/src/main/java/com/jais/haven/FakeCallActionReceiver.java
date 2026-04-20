@@ -12,12 +12,13 @@ public class FakeCallActionReceiver extends BroadcastReceiver {
             return;
         }
 
+        String callerName = intent.getStringExtra(FakeCallUiManager.EXTRA_CALLER_NAME);
         String callerNumber = intent.getStringExtra(FakeCallUiManager.EXTRA_CALLER_NUMBER);
         String action = intent.getAction();
 
         if (FakeCallUiManager.ACTION_ACCEPT.equals(action)) {
             FakeCallUiManager.cancelIncomingNotification(context);
-            FakeCallUiManager.startOngoingActivity(context, callerNumber);
+            FakeCallUiManager.startOngoingActivity(context, callerName, callerNumber);
             return;
         }
 
