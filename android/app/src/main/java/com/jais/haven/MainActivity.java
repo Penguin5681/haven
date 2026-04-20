@@ -3,13 +3,16 @@ package com.jais.haven;
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.accessibility.AccessibilityManager;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import androidx.annotation.NonNull;
 
@@ -19,6 +22,9 @@ import io.flutter.plugin.common.MethodChannel;
 
 public class MainActivity extends FlutterActivity {
 	private static final String SOS_SETUP_CHANNEL = "haven/sos_setup";
+	private static final String AUDIO_CHUNK_CHANNEL = "haven/audio_chunks";
+
+	private MediaPlayer chunkPlayer;
 
 	@Override
 	public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
@@ -38,6 +44,134 @@ public class MainActivity extends FlutterActivity {
 							break;
 					}
 				});
+
+		new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), AUDIO_CHUNK_CHANNEL)
+				.setMethodCallHandler((call, result) -> {
+					switch (call.method) {
+						case "startChunkRecording":
+							result.success(startChunkRecording());
+							break;
+						case "stopChunkRecording":
+							result.success(stopChunkRecording());
+							break;
+						case "isChunkRecording":
+							result.success(ChunkAudioRecordingService.isRecordingActive());
+							break;
+						case "getChunkRecordingStatus":
+							result.success(getChunkRecordingStatus());
+							break;
+						case "playChunkAudio": {
+							final String path = call.argument("path");
+							result.success(playChunkAudio(path));
+							break;
+						}
+						case "stopChunkAudio":
+							result.success(stopChunkAudio());
+							break;
+						default:
+							result.notImplemented();
+							break;
+					}
+				});
+	}
+
+	@Override
+	protected void onDestroy() {
+		stopChunkAudio();
+		super.onDestroy();
+	}
+
+	private Map<String, Object> getChunkRecordingStatus() {
+		final Map<String, Object> status = new HashMap<>();
+		final boolean isRecording = ChunkAudioRecordingService.isRecordingActive();
+		final long startedAtMs = ChunkAudioRecordingService.getRecordingStartedAtMs();
+		final long now = System.currentTimeMillis();
+		final long elapsedMs = isRecording && startedAtMs > 0
+				? Math.max(0, now - startedAtMs)
+				: 0;
+
+		status.put("isRecording", isRecording);
+		status.put("startedAtMs", startedAtMs);
+		status.put("elapsedMs", elapsedMs);
+		status.put("chunkDurationMs", ChunkAudioRecordingService.getChunkDurationMs());
+		status.put("saveDirectory", ChunkAudioRecordingService.getRecordingDirectoryPath());
+		status.put("currentChunkPath", ChunkAudioRecordingService.getCurrentChunkPath());
+		return status;
+	}
+
+	private boolean startChunkRecording() {
+		try {
+			final Intent intent = new Intent(this, ChunkAudioRecordingService.class);
+			intent.setAction(ChunkAudioRecordingService.ACTION_START);
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+				startForegroundService(intent);
+			} else {
+				startService(intent);
+			}
+			return true;
+		} catch (Exception ignored) {
+			return false;
+		}
+	}
+
+	private boolean stopChunkRecording() {
+		try {
+			final Intent intent = new Intent(this, ChunkAudioRecordingService.class);
+			intent.setAction(ChunkAudioRecordingService.ACTION_STOP);
+			startService(intent);
+			return true;
+		} catch (Exception ignored) {
+			return false;
+		}
+	}
+
+	private synchronized boolean playChunkAudio(String path) {
+		if (TextUtils.isEmpty(path)) {
+			return false;
+		}
+
+		stopChunkAudio();
+		try {
+			chunkPlayer = new MediaPlayer();
+			chunkPlayer.setDataSource(path);
+			chunkPlayer.setOnCompletionListener(mp -> releaseChunkPlayer());
+			chunkPlayer.prepare();
+			chunkPlayer.start();
+			return true;
+		} catch (Exception ignored) {
+			releaseChunkPlayer();
+			return false;
+		}
+	}
+
+	private synchronized boolean stopChunkAudio() {
+		if (chunkPlayer == null) {
+			return true;
+		}
+
+		try {
+			if (chunkPlayer.isPlaying()) {
+				chunkPlayer.stop();
+			}
+		} catch (Exception ignored) {
+		}
+
+		releaseChunkPlayer();
+		return true;
+	}
+
+	private synchronized void releaseChunkPlayer() {
+		if (chunkPlayer == null) {
+			return;
+		}
+
+		try {
+			chunkPlayer.reset();
+		} catch (Exception ignored) {
+		}
+
+		chunkPlayer.release();
+		chunkPlayer = null;
 	}
 
 	private boolean isSosAccessibilityEnabled() {

@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 import 'trusted_contact.dart';
@@ -272,12 +276,19 @@ class _HomeTab extends StatefulWidget {
 class _HomeTabState extends State<_HomeTab>
   with TickerProviderStateMixin, WidgetsBindingObserver {
   static const MethodChannel _sosSetupChannel = MethodChannel('haven/sos_setup');
+  static const MethodChannel _audioChunkChannel = MethodChannel('haven/audio_chunks');
 
   Map<String, dynamic>? _profile;
   bool _isLoadingProfile = true;
   bool _isCheckingSosSetup = true;
   bool _isAccessibilityEnabled = false;
   bool _isNotificationEnabled = false;
+  bool _isChunkRecording = false;
+  int _recordingElapsedMs = 0;
+  String _recordingSaveDirectory = '';
+  String _currentChunkPath = '';
+
+  Timer? _recordingStatusTimer;
 
   late final AnimationController _pulse;
   late final AnimationController _hold;
@@ -289,6 +300,7 @@ class _HomeTabState extends State<_HomeTab>
     WidgetsBinding.instance.addObserver(this);
     _loadProfile();
     _refreshSosSetupStatus();
+    _syncAudioRecordingState();
 
     _pulse = AnimationController(
       vsync: this,
@@ -315,6 +327,7 @@ class _HomeTabState extends State<_HomeTab>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _recordingStatusTimer?.cancel();
     _pulse.dispose();
     _hold.dispose();
     super.dispose();
@@ -324,6 +337,7 @@ class _HomeTabState extends State<_HomeTab>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _refreshSosSetupStatus();
+      _syncAudioRecordingState();
     }
   }
 
@@ -388,6 +402,146 @@ class _HomeTabState extends State<_HomeTab>
     await _refreshSosSetupStatus();
   }
 
+  Future<void> _syncAudioRecordingState() async {
+    bool isRecording = false;
+    int elapsedMs = 0;
+    String saveDirectory = '';
+    String currentChunkPath = '';
+
+    try {
+      final status = await _audioChunkChannel
+          .invokeMapMethod<String, dynamic>('getChunkRecordingStatus');
+      isRecording = (status?['isRecording'] as bool?) ?? false;
+      elapsedMs = (status?['elapsedMs'] as num?)?.toInt() ?? 0;
+      saveDirectory = (status?['saveDirectory'] as String?) ?? '';
+      currentChunkPath = (status?['currentChunkPath'] as String?) ?? '';
+    } catch (_) {
+      isRecording = false;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isChunkRecording = isRecording;
+      _recordingElapsedMs = elapsedMs;
+      _recordingSaveDirectory = saveDirectory;
+      _currentChunkPath = currentChunkPath;
+    });
+
+    if (isRecording) {
+      _startRecordingStatusTimer();
+    } else {
+      _stopRecordingStatusTimer();
+    }
+  }
+
+  void _startRecordingStatusTimer() {
+    if (_recordingStatusTimer?.isActive ?? false) {
+      return;
+    }
+    _recordingStatusTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _syncAudioRecordingState(),
+    );
+  }
+
+  void _stopRecordingStatusTimer() {
+    _recordingStatusTimer?.cancel();
+    _recordingStatusTimer = null;
+  }
+
+  String _formatRecordingDuration(int totalMs) {
+    final totalSeconds = (totalMs / 1000).floor();
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    final mm = minutes.toString().padLeft(2, '0');
+    final ss = seconds.toString().padLeft(2, '0');
+    if (hours > 0) {
+      final hh = hours.toString().padLeft(2, '0');
+      return '$hh:$mm:$ss';
+    }
+    return '$mm:$ss';
+  }
+
+  Future<void> _toggleAudioChunkRecording() async {
+    if (_isChunkRecording) {
+      bool stopped = false;
+      try {
+        stopped = await _audioChunkChannel.invokeMethod<bool>('stopChunkRecording') ?? false;
+      } catch (_) {
+        stopped = false;
+      }
+
+      if (!mounted) return;
+      if (stopped) {
+        await _syncAudioRecordingState();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Audio recording stopped.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not stop audio recording.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+
+    final micPermission = await Permission.microphone.request();
+    if (!micPermission.isGranted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Microphone permission is required to record audio.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    bool started = false;
+    try {
+      started = await _audioChunkChannel.invokeMethod<bool>('startChunkRecording') ?? false;
+    } catch (_) {
+      started = false;
+    }
+
+    if (!mounted) return;
+    if (started) {
+      await _syncAudioRecordingState();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Audio recording started in 10-second chunks.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not start audio recording.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _openRecordingsScreen() async {
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _RecordingsScreen(saveDirectory: _recordingSaveDirectory),
+      ),
+    );
+    await _syncAudioRecordingState();
+  }
+
   bool get _isProfileComplete {
     final profile = _profile;
     if (profile == null) return true;
@@ -437,6 +591,12 @@ class _HomeTabState extends State<_HomeTab>
             isLoadingContacts: widget.isLoadingContacts,
             onAddContact: widget.onAddContact,
             onOpenContacts: widget.onOpenContacts,
+            onRecordAudioTap: _toggleAudioChunkRecording,
+            onOpenRecordings: _openRecordingsScreen,
+            isChunkRecording: _isChunkRecording,
+            recordingElapsedLabel: _formatRecordingDuration(_recordingElapsedMs),
+            recordingSaveDirectory: _recordingSaveDirectory,
+            currentChunkPath: _currentChunkPath,
           ),
           SizedBox(height: bottomPad + 16),
         ],
@@ -1013,12 +1173,24 @@ class _ScrollZone extends StatelessWidget {
   final bool isLoadingContacts;
   final VoidCallback onAddContact;
   final VoidCallback onOpenContacts;
+  final VoidCallback onRecordAudioTap;
+  final VoidCallback onOpenRecordings;
+  final bool isChunkRecording;
+  final String recordingElapsedLabel;
+  final String recordingSaveDirectory;
+  final String currentChunkPath;
 
   const _ScrollZone({
     required this.trustedContacts,
     required this.isLoadingContacts,
     required this.onAddContact,
     required this.onOpenContacts,
+    required this.onRecordAudioTap,
+    required this.onOpenRecordings,
+    required this.isChunkRecording,
+    required this.recordingElapsedLabel,
+    required this.recordingSaveDirectory,
+    required this.currentChunkPath,
   });
 
   @override
@@ -1030,7 +1202,19 @@ class _ScrollZone extends StatelessWidget {
         children: [
         const _SectionLabel('More Tools'),
         const SizedBox(height: 12),
-        const _TertiaryGrid(),
+        _TertiaryGrid(
+          onRecordAudioTap: onRecordAudioTap,
+          isChunkRecording: isChunkRecording,
+          recordingElapsedLabel: recordingElapsedLabel,
+        ),
+        const SizedBox(height: 10),
+        _RecordingStatePanel(
+          isChunkRecording: isChunkRecording,
+          recordingElapsedLabel: recordingElapsedLabel,
+          recordingSaveDirectory: recordingSaveDirectory,
+          currentChunkPath: currentChunkPath,
+          onOpenRecordings: onOpenRecordings,
+        ),
         const SizedBox(height: 24),
         const _SectionLabel('Trusted Contacts'),
         const SizedBox(height: 12),
@@ -1083,30 +1267,520 @@ class _SectionLabel extends StatelessWidget {
 
 // ── Tertiary 2-col grid  (Record Audio + Safe Places)
 class _TertiaryGrid extends StatelessWidget {
-  const _TertiaryGrid();
+  final VoidCallback onRecordAudioTap;
+  final bool isChunkRecording;
+  final String recordingElapsedLabel;
 
-  static const _items = [
-    (Icons.mic_rounded,    'Record Audio', 'Covert background capture', 2),
-    (Icons.shield_rounded, 'Safe Places',  'Nearby verified safe zones', 3),
-  ];
+  const _TertiaryGrid({
+    required this.onRecordAudioTap,
+    required this.isChunkRecording,
+    required this.recordingElapsedLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: List.generate(_items.length, (i) {
-        final (icon, title, sub, pi) = _items[i];
-        return Expanded(
+      children: [
+        Expanded(
           child: Padding(
-            padding: EdgeInsets.only(left: i == 0 ? 0 : 6, right: i == 0 ? 6 : 0),
+            padding: const EdgeInsets.only(right: 6),
             child: _TertiaryCard(
-              icon: icon,
-              title: title,
-              sub: sub,
-              palette: _T.act[pi],
+              icon: isChunkRecording ? Icons.stop_circle_rounded : Icons.mic_rounded,
+              title: isChunkRecording ? 'Stop Recording' : 'Record Audio',
+              sub: isChunkRecording
+                  ? 'Recording • $recordingElapsedLabel'
+                  : 'Start covert background capture',
+              palette: _T.act[2],
+              onTap: onRecordAudioTap,
             ),
           ),
-        );
-      }),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 6),
+            child: _TertiaryCard(
+              icon: Icons.shield_rounded,
+              title: 'Safe Places',
+              sub: 'Nearby verified safe zones',
+              palette: _T.act[3],
+              onTap: () {},
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecordingStatePanel extends StatelessWidget {
+  final bool isChunkRecording;
+  final String recordingElapsedLabel;
+  final String recordingSaveDirectory;
+  final String currentChunkPath;
+  final VoidCallback onOpenRecordings;
+
+  const _RecordingStatePanel({
+    required this.isChunkRecording,
+    required this.recordingElapsedLabel,
+    required this.recordingSaveDirectory,
+    required this.currentChunkPath,
+    required this.onOpenRecordings,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = isChunkRecording ? const Color(0xFF15803D) : const Color(0xFF64748B);
+    final statusText = isChunkRecording ? 'ON' : 'OFF';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.multitrack_audio_rounded, color: statusColor, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Recording: $statusText',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: statusColor,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                recordingElapsedLabel,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF334155),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Save folder: ${recordingSaveDirectory.isEmpty ? 'Not available yet' : recordingSaveDirectory}',
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF475569),
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+          ),
+          if (isChunkRecording && currentChunkPath.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Current chunk: $currentChunkPath',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF64748B),
+                height: 1.4,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: onOpenRecordings,
+              icon: const Icon(Icons.library_music_rounded, size: 16),
+              label: const Text('View Recordings'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF1D4ED8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecordingsScreen extends StatefulWidget {
+  final String saveDirectory;
+
+  const _RecordingsScreen({required this.saveDirectory});
+
+  @override
+  State<_RecordingsScreen> createState() => _RecordingsScreenState();
+}
+
+class _RecordingsScreenState extends State<_RecordingsScreen> {
+  static const MethodChannel _audioChunkChannel = MethodChannel('haven/audio_chunks');
+  static const String _cleanupPreferenceKey = 'recordings_cleanup_label';
+  static const Map<String, int?> _cleanupOptions = {
+    'Off': null,
+    '1 hour': 3600,
+    '6 hours': 21600,
+    '24 hours': 86400,
+    '3 days': 259200,
+    '7 days': 604800,
+  };
+
+  List<FileSystemEntity> _files = const [];
+  bool _isLoading = true;
+  String? _playingPath;
+  bool _selectionMode = false;
+  final Set<String> _selectedPaths = <String>{};
+  String _cleanupLabel = 'Off';
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  @override
+  void dispose() {
+    _stopPlayback();
+    super.dispose();
+  }
+
+  Future<void> _initialize() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLabel = prefs.getString(_cleanupPreferenceKey);
+    if (savedLabel != null && _cleanupOptions.containsKey(savedLabel)) {
+      _cleanupLabel = savedLabel;
+    }
+    await _loadFiles();
+  }
+
+  Future<void> _loadFiles() async {
+    if (widget.saveDirectory.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _files = const [];
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final dir = Directory(widget.saveDirectory);
+    if (!await dir.exists()) {
+      if (!mounted) return;
+      setState(() {
+        _files = const [];
+        _isLoading = false;
+      });
+      return;
+    }
+
+    await _runAutoCleanup(dir);
+
+    final entities = await dir.list().where((e) => e.path.endsWith('.m4a')).toList();
+    entities.sort((a, b) {
+      final aModified = File(a.path).lastModifiedSync();
+      final bModified = File(b.path).lastModifiedSync();
+      return bModified.compareTo(aModified);
+    });
+
+    if (!mounted) return;
+    setState(() {
+      _files = entities;
+      _selectedPaths.removeWhere((path) => !_files.any((f) => f.path == path));
+      if (_selectedPaths.isEmpty) {
+        _selectionMode = false;
+      }
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _runAutoCleanup(Directory dir) async {
+    final retentionSeconds = _cleanupOptions[_cleanupLabel];
+    if (retentionSeconds == null) {
+      return;
+    }
+
+    final cutoff = DateTime.now().subtract(Duration(seconds: retentionSeconds));
+    final entities = await dir.list().where((e) => e.path.endsWith('.m4a')).toList();
+    for (final entity in entities) {
+      final file = File(entity.path);
+      final modifiedAt = await file.lastModified();
+      if (modifiedAt.isBefore(cutoff)) {
+        await file.delete();
+      }
+    }
+  }
+
+  Future<void> _togglePlayback(String path) async {
+    if (_playingPath == path) {
+      await _stopPlayback();
+      if (!mounted) return;
+      setState(() => _playingPath = null);
+      return;
+    }
+
+    final started = await _audioChunkChannel
+            .invokeMethod<bool>('playChunkAudio', <String, dynamic>{'path': path}) ??
+        false;
+    if (!mounted) return;
+    if (started) {
+      setState(() => _playingPath = path);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not play this recording.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _stopPlayback() async {
+    try {
+      await _audioChunkChannel.invokeMethod<bool>('stopChunkAudio');
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  Future<void> _deleteFile(String path) async {
+    if (_playingPath == path) {
+      await _stopPlayback();
+      if (mounted) {
+        setState(() => _playingPath = null);
+      }
+    }
+
+    final file = File(path);
+    if (await file.exists()) {
+      await file.delete();
+    }
+    await _loadFiles();
+  }
+
+  Future<void> _toggleSelection(String path) async {
+    setState(() {
+      _selectionMode = true;
+      if (_selectedPaths.contains(path)) {
+        _selectedPaths.remove(path);
+      } else {
+        _selectedPaths.add(path);
+      }
+      if (_selectedPaths.isEmpty) {
+        _selectionMode = false;
+      }
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    if (_selectedPaths.isEmpty) return;
+
+    final count = _selectedPaths.length;
+    final shouldDelete = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete recordings?'),
+            content: Text('Delete $count selected recording(s)?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.redPrimary),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!shouldDelete) return;
+
+    await _stopPlayback();
+    for (final path in _selectedPaths.toList()) {
+      final file = File(path);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _playingPath = null;
+      _selectedPaths.clear();
+      _selectionMode = false;
+    });
+    await _loadFiles();
+  }
+
+  Future<void> _updateCleanupPreference(String label) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cleanupPreferenceKey, label);
+    if (!mounted) return;
+    setState(() => _cleanupLabel = label);
+    await _loadFiles();
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    final kb = bytes / 1024;
+    if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
+    final mb = kb / 1024;
+    return '${mb.toStringAsFixed(1)} MB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final appBarTitle = _selectionMode
+        ? '${_selectedPaths.length} selected'
+        : 'Recorded Chunks';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(appBarTitle),
+        actions: [
+          if (_selectionMode)
+            IconButton(
+              onPressed: _deleteSelected,
+              icon: const Icon(Icons.delete_rounded),
+            ),
+          if (_selectionMode)
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _selectionMode = false;
+                  _selectedPaths.clear();
+                });
+              },
+              icon: const Icon(Icons.close_rounded),
+            ),
+          IconButton(
+            onPressed: _loadFiles,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _files.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No recordings found yet.',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _files.length + 1,
+                  separatorBuilder: (_, index) => index == 0
+                      ? const SizedBox(height: 14)
+                      : const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Auto cleanup',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            DropdownButton<String>(
+                              value: _cleanupLabel,
+                              underline: const SizedBox.shrink(),
+                              items: _cleanupOptions.keys
+                                  .map((label) => DropdownMenuItem<String>(
+                                        value: label,
+                                        child: Text(label),
+                                      ))
+                                  .toList(growable: false),
+                              onChanged: (next) {
+                                if (next == null) return;
+                                _updateCleanupPreference(next);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final file = File(_files[index - 1].path);
+                    final stat = file.statSync();
+                    final isPlaying = _playingPath == file.path;
+                    final isSelected = _selectedPaths.contains(file.path);
+                    final fileName = file.uri.pathSegments.last;
+
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: ListTile(
+                        onTap: () {
+                          if (_selectionMode) {
+                            _toggleSelection(file.path);
+                          } else {
+                            _togglePlayback(file.path);
+                          }
+                        },
+                        onLongPress: () => _toggleSelection(file.path),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        leading: _selectionMode
+                            ? Checkbox(
+                                value: isSelected,
+                                onChanged: (_) => _toggleSelection(file.path),
+                              )
+                            : IconButton(
+                                onPressed: () => _togglePlayback(file.path),
+                                icon: Icon(
+                                  isPlaying
+                                      ? Icons.stop_circle_rounded
+                                      : Icons.play_circle_fill_rounded,
+                                  color: const Color(0xFF1D4ED8),
+                                  size: 30,
+                                ),
+                              ),
+                        title: Text(
+                          fileName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          '${_formatBytes(stat.size)} • ${stat.modified}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                        trailing: _selectionMode
+                            ? null
+                            : IconButton(
+                                onPressed: () => _deleteFile(file.path),
+                                icon: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: AppColors.redPrimary,
+                                ),
+                              ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
@@ -1116,17 +1790,19 @@ class _TertiaryCard extends StatelessWidget {
   final String title;
   final String sub;
   final List<Color> palette;
+  final VoidCallback onTap;
   const _TertiaryCard({
     required this.icon,
     required this.title,
     required this.sub,
     required this.palette,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

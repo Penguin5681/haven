@@ -378,6 +378,14 @@ class _WomenProfileTabState extends State<WomenProfileTab> {
     );
   }
 
+  Future<void> _openSettingsPlaceholder() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const _ProfileSettingsPlaceholderScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -395,14 +403,25 @@ class _WomenProfileTabState extends State<WomenProfileTab> {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            const Text(
-              'My Profile',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.4,
-              ),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'My Profile',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _openSettingsPlaceholder,
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Settings',
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(
@@ -786,6 +805,27 @@ class _SectionSaveAction extends StatelessWidget {
 }
 
 enum _ProfileSection { identity, contact, address }
+
+class _ProfileSettingsPlaceholderScreen extends StatelessWidget {
+  const _ProfileSettingsPlaceholderScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: const Center(
+        child: Text(
+          'Settings placeholder',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _CircularCropPage extends StatefulWidget {
   final Uint8List imageBytes;
