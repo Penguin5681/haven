@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sos_accessibility_service_description">Triggers Haven SOS when either volume button is pressed 5 times quickly.</string>
+</resources>

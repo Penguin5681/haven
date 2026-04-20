@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 import 'trusted_contact.dart';
@@ -268,9 +269,15 @@ class _HomeTab extends StatefulWidget {
   State<_HomeTab> createState() => _HomeTabState();
 }
 
-class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
+class _HomeTabState extends State<_HomeTab>
+  with TickerProviderStateMixin, WidgetsBindingObserver {
+  static const MethodChannel _sosSetupChannel = MethodChannel('haven/sos_setup');
+
   Map<String, dynamic>? _profile;
   bool _isLoadingProfile = true;
+  bool _isCheckingSosSetup = true;
+  bool _isAccessibilityEnabled = false;
+  bool _isNotificationEnabled = false;
 
   late final AnimationController _pulse;
   late final AnimationController _hold;
@@ -279,7 +286,9 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadProfile();
+    _refreshSosSetupStatus();
 
     _pulse = AnimationController(
       vsync: this,
@@ -305,9 +314,17 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulse.dispose();
     _hold.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshSosSetupStatus();
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -317,6 +334,58 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
     } catch (_) {
       if (mounted) setState(() => _isLoadingProfile = false);
     }
+  }
+
+  Future<void> _refreshSosSetupStatus() async {
+    if (!mounted) return;
+    setState(() => _isCheckingSosSetup = true);
+
+    bool accessibilityEnabled = false;
+    bool notificationEnabled = false;
+
+    try {
+      accessibilityEnabled =
+          await _sosSetupChannel.invokeMethod<bool>('isSosAccessibilityEnabled') ?? false;
+    } catch (_) {
+      accessibilityEnabled = false;
+    }
+
+    try {
+      final status = await Permission.notification.status;
+      notificationEnabled = status.isGranted;
+    } catch (_) {
+      notificationEnabled = false;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isAccessibilityEnabled = accessibilityEnabled;
+      _isNotificationEnabled = notificationEnabled;
+      _isCheckingSosSetup = false;
+    });
+  }
+
+  Future<void> _openAccessibilitySettings() async {
+    bool opened = false;
+    try {
+      opened = await _sosSetupChannel.invokeMethod<bool>('openAccessibilitySettings') ?? false;
+    } catch (_) {
+      opened = false;
+    }
+
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open Accessibility settings.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _requestNotifications() async {
+    await Permission.notification.request();
+    await _refreshSosSetupStatus();
   }
 
   bool get _isProfileComplete {
@@ -329,48 +398,49 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final h = MediaQuery.of(context).size.height;
     final topPad = MediaQuery.of(context).padding.top;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
     final String name = _profile?['full_name'] ?? 'User';
     final String? photoUrl = _profile?['profile_photo_url'];
 
-    return Column(
-      children: [
-        // ── 1. FIXED HEADER ──────────────────────────────────────────────
-        _Header(
-          topPad: topPad,
-          name: name,
-          photoUrl: photoUrl,
-          isLoading: _isLoadingProfile,
-          onLogout: widget.onLogout,
-        ),
-
-        // ── 3. ABOVE-THE-FOLD: SOS HERO ──────────────────────────────────
-        //    Critical action. Zero scrolling required.
-        SizedBox(
-          height: h * 0.38,
-          child: _SOSHero(
-            pulse: _pulse,
-            hold: _hold,
-            active: _sosActive,
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          _Header(
+            topPad: topPad,
+            name: name,
+            photoUrl: photoUrl,
+            isLoading: _isLoadingProfile,
+            onLogout: widget.onLogout,
           ),
-        ),
-
-        // ── 4. HIGH-URGENCY SECONDARY ACTIONS ────────────────────────────
-        //    Still above-fold, thumb-zone. Share Location & Fake Call.
-        _PrimarySecondaryRow(),
-
-        if (!_isLoadingProfile && !_isProfileComplete)
-          _IncompleteProfilePrompt(onTap: widget.onOpenProfile),
-
-        // ── 5. SCROLLABLE TERTIARY CONTENT ───────────────────────────────
-        Expanded(
-          child: _ScrollZone(
+          SizedBox(
+            height: h * 0.38,
+            child: _SOSHero(
+              pulse: _pulse,
+              hold: _hold,
+              active: _sosActive,
+            ),
+          ),
+          _PrimarySecondaryRow(),
+          _SosSetupStatusCard(
+            isLoading: _isCheckingSosSetup,
+            accessibilityEnabled: _isAccessibilityEnabled,
+            notificationEnabled: _isNotificationEnabled,
+            onRefresh: _refreshSosSetupStatus,
+            onOpenAccessibilitySettings: _openAccessibilitySettings,
+            onRequestNotifications: _requestNotifications,
+          ),
+          if (!_isLoadingProfile && !_isProfileComplete)
+            _IncompleteProfilePrompt(onTap: widget.onOpenProfile),
+          _ScrollZone(
             trustedContacts: widget.trustedContacts,
             isLoadingContacts: widget.isLoadingContacts,
             onAddContact: widget.onAddContact,
             onOpenContacts: widget.onOpenContacts,
           ),
-        ),
-      ],
+          SizedBox(height: bottomPad + 16),
+        ],
+      ),
     );
   }
 }
@@ -723,6 +793,152 @@ class _IncompleteProfilePrompt extends StatelessWidget {
   }
 }
 
+class _SosSetupStatusCard extends StatelessWidget {
+  final bool isLoading;
+  final bool accessibilityEnabled;
+  final bool notificationEnabled;
+  final VoidCallback onRefresh;
+  final VoidCallback onOpenAccessibilitySettings;
+  final VoidCallback onRequestNotifications;
+
+  const _SosSetupStatusCard({
+    required this.isLoading,
+    required this.accessibilityEnabled,
+    required this.notificationEnabled,
+    required this.onRefresh,
+    required this.onOpenAccessibilitySettings,
+    required this.onRequestNotifications,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFBFDBFE)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.settings_accessibility_rounded, color: Color(0xFF1D4ED8)),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'SOS Setup Status',
+                    style: TextStyle(
+                      color: Color(0xFF1E3A8A),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: onRefresh,
+                  borderRadius: BorderRadius.circular(14),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF1D4ED8)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (isLoading)
+              const Text(
+                'Checking service and permissions...',
+                style: TextStyle(fontSize: 12, color: Color(0xFF334155)),
+              )
+            else ...[
+              _SetupStatusRow(
+                label: 'Accessibility service',
+                isEnabled: accessibilityEnabled,
+              ),
+              const SizedBox(height: 6),
+              _SetupStatusRow(
+                label: 'Notification permission',
+                isEnabled: notificationEnabled,
+              ),
+              const SizedBox(height: 10),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final buttonWidth = (constraints.maxWidth - 8) / 2;
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      SizedBox(
+                        width: buttonWidth,
+                        child: OutlinedButton.icon(
+                          onPressed: onOpenAccessibilitySettings,
+                          icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                          label: const Text('Accessibility'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1D4ED8),
+                            side: const BorderSide(color: Color(0xFF93C5FD)),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: buttonWidth,
+                        child: FilledButton.icon(
+                          onPressed: notificationEnabled ? null : onRequestNotifications,
+                          icon: const Icon(Icons.notifications_active_rounded, size: 16),
+                          label: Text(notificationEnabled ? 'Allowed' : 'Allow'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            disabledBackgroundColor: const Color(0xFF93C5FD),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SetupStatusRow extends StatelessWidget {
+  final String label;
+  final bool isEnabled;
+
+  const _SetupStatusRow({required this.label, required this.isEnabled});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          isEnabled ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+          size: 18,
+          color: isEnabled ? const Color(0xFF15803D) : const Color(0xFFB45309),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            '$label: ${isEnabled ? 'Enabled' : 'Not enabled'}',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF334155),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PillAction extends StatefulWidget {
   final IconData icon;
   final String label;
@@ -807,10 +1023,11 @@ class _ScrollZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      physics: const BouncingScrollPhysics(),
-      children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         const _SectionLabel('More Tools'),
         const SizedBox(height: 12),
         const _TertiaryGrid(),
@@ -827,7 +1044,8 @@ class _ScrollZone extends StatelessWidget {
         const _SectionLabel('Safety Tip'),
         const SizedBox(height: 12),
         const _TipCard(),
-      ],
+        ],
+      ),
     );
   }
 }
