@@ -5,12 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/fake_call_service.dart';
+import '../../../core/services/sos_service.dart';
 import 'trusted_contact.dart';
 import 'trusted_contacts_store.dart';
 import 'trusted_contacts_ui.dart';
@@ -278,6 +281,7 @@ class _HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<_HomeTab>
   with TickerProviderStateMixin, WidgetsBindingObserver {
+  static const Duration _sosChunkDuration = Duration(seconds: 20);
   static const MethodChannel _sosSetupChannel = MethodChannel('haven/sos_setup');
   static const MethodChannel _audioChunkChannel = MethodChannel('haven/audio_chunks');
 
@@ -291,6 +295,13 @@ class _HomeTabState extends State<_HomeTab>
   int _recordingElapsedMs = 0;
   String _recordingSaveDirectory = '';
   String _currentChunkPath = '';
+  bool _isSosAudioStreaming = false;
+
+  final AudioRecorder _sosAudioRecorder = AudioRecorder();
+  Timer? _sosChunkTimer;
+  String? _activeSosChunkPath;
+  int _sosChunkIndex = 0;
+  bool _isSosChunkUploadInFlight = false;
 
   Timer? _recordingStatusTimer;
 
@@ -314,10 +325,18 @@ class _HomeTabState extends State<_HomeTab>
     _hold = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
-    )..addStatusListener((s) {
+    )..addStatusListener((s) async {
         if (s == AnimationStatus.completed) {
           HapticFeedback.heavyImpact();
           setState(() => _sosActive = true);
+          
+          try {
+            await SosService.instance.triggerSos();
+            await _startSosAudioStreaming();
+          } catch (e) {
+            debugPrint('Error triggering SOS: $e');
+          }
+
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) {
               setState(() => _sosActive = false);
@@ -331,7 +350,10 @@ class _HomeTabState extends State<_HomeTab>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _stopSosAudioStreaming();
     _recordingStatusTimer?.cancel();
+    _sosChunkTimer?.cancel();
+    _sosAudioRecorder.dispose();
     _pulse.dispose();
     _hold.dispose();
     super.dispose();
@@ -436,6 +458,134 @@ class _HomeTabState extends State<_HomeTab>
     } else {
       _stopRecordingStatusTimer();
     }
+  }
+
+  Future<void> _startSosAudioStreaming() async {
+    if (_isSosAudioStreaming) {
+      return;
+    }
+
+    final micPermission = await Permission.microphone.request();
+    if (!micPermission.isGranted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Microphone permission is required for SOS audio streaming.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSosAudioStreaming = true;
+      _sosChunkIndex = 0;
+    });
+
+    try {
+      await _beginSosChunkRecording();
+      _sosChunkTimer = Timer.periodic(_sosChunkDuration, (_) async {
+        await _rotateAndUploadSosChunk();
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('SOS triggered. Live audio is now streaming to authorities.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Failed to start SOS audio streaming: $e');
+      await _stopSosAudioStreaming(uploadFinalChunk: false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not start SOS audio streaming: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _beginSosChunkRecording() async {
+    final Directory tmpDir = await getTemporaryDirectory();
+    final Directory sosDir = Directory('${tmpDir.path}/sos_live_audio');
+    if (!await sosDir.exists()) {
+      await sosDir.create(recursive: true);
+    }
+
+    final String path = '${sosDir.path}/chunk_${DateTime.now().millisecondsSinceEpoch}_$_sosChunkIndex.m4a';
+    _activeSosChunkPath = path;
+
+    await _sosAudioRecorder.start(
+      const RecordConfig(
+        encoder: AudioEncoder.aacLc,
+        sampleRate: 16000,
+        bitRate: 64000,
+      ),
+      path: path,
+    );
+  }
+
+  Future<void> _rotateAndUploadSosChunk({bool restartRecording = true}) async {
+    if (!_isSosAudioStreaming || _isSosChunkUploadInFlight) {
+      return;
+    }
+
+    _isSosChunkUploadInFlight = true;
+
+    try {
+      final String? chunkPath = await _sosAudioRecorder.stop();
+      final String? pathToUpload = chunkPath ?? _activeSosChunkPath;
+
+      if (pathToUpload != null) {
+        final File chunkFile = File(pathToUpload);
+        if (await chunkFile.exists() && await chunkFile.length() > 0) {
+          await SosService.instance.uploadAudioChunk(_sosChunkIndex, pathToUpload);
+          _sosChunkIndex += 1;
+          await chunkFile.delete();
+        }
+      }
+
+      if (_isSosAudioStreaming && restartRecording) {
+        await _beginSosChunkRecording();
+      }
+    } catch (e) {
+      debugPrint('SOS chunk upload failed: $e');
+      if (_isSosAudioStreaming) {
+        try {
+          await _beginSosChunkRecording();
+        } catch (inner) {
+          debugPrint('SOS chunk recorder restart failed: $inner');
+        }
+      }
+    } finally {
+      _isSosChunkUploadInFlight = false;
+    }
+  }
+
+  Future<void> _stopSosAudioStreaming({bool uploadFinalChunk = true}) async {
+    if (!_isSosAudioStreaming) {
+      return;
+    }
+
+    _sosChunkTimer?.cancel();
+    _sosChunkTimer = null;
+
+    if (!uploadFinalChunk) {
+      _isSosAudioStreaming = false;
+      try {
+        await _sosAudioRecorder.stop();
+      } catch (_) {}
+      return;
+    }
+
+    try {
+      await _rotateAndUploadSosChunk(restartRecording: false);
+    } catch (_) {}
+
+    _isSosAudioStreaming = false;
   }
 
   void _startRecordingStatusTimer() {

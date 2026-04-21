@@ -1,6 +1,8 @@
 class ApiConstants {
-  static const String baseUrl = 'http://192.168.18.107:8080/api/auth';
+  static const String hostUrl = 'https://haven-backend-671108073568.asia-south2.run.app/api';
+  static const String baseUrl = '$hostUrl/auth';
   
+  // Women Auth
   static const String signup = '$baseUrl/signup';
   static const String login = '$baseUrl/login';
   static const String googleAuth = '$baseUrl/google';
@@ -13,4 +15,17 @@ class ApiConstants {
   static const String profileState = '$baseUrl/profile/state';
   static const String profileDistrict = '$baseUrl/profile/district';
   static const String profilePhoto = '$baseUrl/profile/profile-photo';
+
+  // Authority Auth
+  static const String authoritySignup = '$baseUrl/authority/signup';
+  static const String authorityLogin = '$baseUrl/authority/login';
+
+  // SOS (Women App)
+  static const String sosTrigger = '$hostUrl/sos/trigger';
+  static String sosAudioChunk(String sosId) => '$hostUrl/sos/$sosId/audio-chunk';
+
+  // Authority Dashboard
+  static const String authoritySosAlerts = '$hostUrl/authority/sos-alerts';
+  static String authoritySosAlertDetails(String sosId) => '$hostUrl/authority/sos-alerts/$sosId';
+  static String authoritySosAlertStatus(String sosId) => '$hostUrl/authority/sos-alerts/$sosId/status';
 }

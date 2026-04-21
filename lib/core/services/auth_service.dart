@@ -43,12 +43,39 @@ class AuthService {
     );
   }
 
+  Future<Map<String, dynamic>> authoritySignup({
+    required String name,
+    required String email,
+    required String phoneNumber,
+    required String password,
+    required String jurisdiction,
+  }) async {
+    final uri = Uri.parse(ApiConstants.authoritySignup);
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': name.trim(),
+        'email': email.trim(),
+        'phone_number': phoneNumber.trim(),
+        'password': password,
+        'jurisdiction': jurisdiction.trim(),
+      }),
+    );
+
+    return _handleJsonResponse(
+      method: 'POST',
+      uri: uri,
+      response: response,
+    );
+  }
+
   Future<Map<String, dynamic>> login(
     String email,
     String password, {
     String? role,
   }) async {
-    final uri = Uri.parse(ApiConstants.login);
+    final uri = Uri.parse(role == 'authority' ? ApiConstants.authorityLogin : ApiConstants.login);
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
