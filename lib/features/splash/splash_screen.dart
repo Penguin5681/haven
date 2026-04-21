@@ -248,7 +248,7 @@ class _SplashScreenState extends State<SplashScreen>
                         child: SlideTransition(
                           position: _wordSlide,
                           child: const Text(
-                            'haven',
+                            'Safora',
                             style: TextStyle(
                               fontSize: 44,
                               fontWeight: FontWeight.w700,
