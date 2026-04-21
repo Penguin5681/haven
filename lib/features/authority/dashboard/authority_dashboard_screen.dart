@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/services/sos_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -234,19 +235,15 @@ class AuthorityAlert {
   factory AuthorityAlert.fromJson(Map<String, dynamic> json) {
     final dynamic locationData = json['location'];
     final dynamic userData = json['user'];
-    double latitude = 0;
-    double longitude = 0;
+    final ({double lat, double lng}) coordinates = _extractCoordinates(json, locationData);
+    final double latitude = coordinates.lat;
+    final double longitude = coordinates.lng;
     String? address;
     String userDisplay = 'Unknown User';
     int chunkCount = 0;
 
     if (locationData is Map<String, dynamic>) {
-      latitude = _asDouble(locationData['latitude']);
-      longitude = _asDouble(locationData['longitude']);
       address = locationData['address'] as String?;
-    } else {
-      latitude = _asDouble(json['latitude']);
-      longitude = _asDouble(json['longitude']);
     }
 
     if (userData is Map<String, dynamic>) {
@@ -341,6 +338,54 @@ class AuthorityAlert {
       return value.toDouble();
     }
     return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static ({double lat, double lng}) _extractCoordinates(
+    Map<String, dynamic> root,
+    dynamic locationData,
+  ) {
+    double lat = 0;
+    double lng = 0;
+
+    if (locationData is Map<String, dynamic>) {
+      lat = _asDouble(locationData['latitude']);
+      lng = _asDouble(locationData['longitude']);
+
+      if (lat == 0 && lng == 0) {
+        lat = _asDouble(locationData['lat']);
+        lng = _asDouble(locationData['lng']);
+      }
+
+      if (lat == 0 && lng == 0) {
+        lat = _asDouble(locationData['lat']);
+        lng = _asDouble(locationData['lon'] ?? locationData['long']);
+      }
+
+      if (lat == 0 && lng == 0) {
+        final dynamic coordinates = locationData['coordinates'];
+        if (coordinates is List<dynamic> && coordinates.length >= 2) {
+          lng = _asDouble(coordinates[0]);
+          lat = _asDouble(coordinates[1]);
+        }
+      }
+    }
+
+    if (lat == 0 && lng == 0) {
+      lat = _asDouble(root['latitude']);
+      lng = _asDouble(root['longitude']);
+    }
+
+    if (lat == 0 && lng == 0) {
+      lat = _asDouble(root['lat']);
+      lng = _asDouble(root['lng']);
+    }
+
+    if (lat == 0 && lng == 0) {
+      lat = _asDouble(root['lat']);
+      lng = _asDouble(root['lon'] ?? root['long']);
+    }
+
+    return (lat: lat, lng: lng);
   }
 }
 
@@ -800,6 +845,35 @@ class _AlertDetailsSheetState extends State<_AlertDetailsSheet> {
 
   PlayerState _playerState = PlayerState.stopped;
 
+  bool get _hasCoordinates {
+    final double lat = widget.alert.latitude;
+    final double lng = widget.alert.longitude;
+    return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && !(lat == 0 && lng == 0);
+  }
+
+  Future<void> _openInGoogleMaps() async {
+    if (!_hasCoordinates) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Coordinates unavailable for this alert.')),
+      );
+      return;
+    }
+
+    final Uri mapUri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${widget.alert.latitude},${widget.alert.longitude}',
+    );
+
+    final bool launched = await launchUrl(mapUri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open Google Maps.')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1040,6 +1114,17 @@ class _AlertDetailsSheetState extends State<_AlertDetailsSheet> {
               icon: Icons.place,
               title: 'Coordinates',
               value: '${widget.alert.latitude.toStringAsFixed(5)}, ${widget.alert.longitude.toStringAsFixed(5)}',
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _openInGoogleMaps,
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('Open In Google Maps'),
+                ),
+              ),
             ),
             _DetailRow(
               icon: Icons.home,

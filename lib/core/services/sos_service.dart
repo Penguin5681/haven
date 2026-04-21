@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
@@ -15,20 +15,41 @@ class SosService {
 
   String? currentSosId;
 
+  Future<Position> _resolveCurrentPosition() async {
+    final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw Exception('Location services are disabled.');
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      throw Exception('Location permission is required to trigger SOS.');
+    }
+
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      ).timeout(const Duration(seconds: 12));
+    } catch (e) {
+      final Position? fallback = await Geolocator.getLastKnownPosition();
+      if (fallback != null) {
+        return fallback;
+      }
+      throw Exception('Unable to determine current location.');
+    }
+  }
+
   Future<Map<String, dynamic>> triggerSos() async {
     final token = await AuthService.instance.getToken();
     if (token == null || token.isEmpty) {
       throw Exception('Not authenticated. Cannot trigger SOS.');
     }
 
-    Position? position;
-    try {
-      position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-    } catch (e) {
-      debugPrint('Failed to get location for SOS: $e');
-    }
+    final Position position = await _resolveCurrentPosition();
 
     final uri = Uri.parse(ApiConstants.sosTrigger);
     final response = await http.post(
@@ -38,9 +59,9 @@ class SosService {
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
-        'latitude': position?.latitude ?? 0.0,
-        'longitude': position?.longitude ?? 0.0,
-        'accuracy': position?.accuracy ?? 0.0,
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+        'accuracy': position.accuracy,
         'timestamp': DateTime.now().toIso8601String(),
       }),
     );
