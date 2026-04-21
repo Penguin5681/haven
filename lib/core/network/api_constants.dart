@@ -22,6 +22,7 @@ class ApiConstants {
 
   // SOS (Women App)
   static const String sosTrigger = '$hostUrl/sos/trigger';
+  static const String sosState = '$hostUrl/sos/state';
   static String sosAudioChunk(String sosId) => '$hostUrl/sos/$sosId/audio-chunk';
 
   // Authority Dashboard

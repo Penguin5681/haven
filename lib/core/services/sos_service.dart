@@ -79,6 +79,47 @@ class SosService {
     }
   }
 
+  Future<Map<String, dynamic>> getSosState() async {
+    final token = await AuthService.instance.getToken();
+    if (token == null || token.isEmpty) {
+      throw Exception('Not authenticated. Cannot fetch SOS state.');
+    }
+
+    final uri = Uri.parse(ApiConstants.sosState);
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Failed to fetch SOS state: ${response.body}');
+    }
+
+    final Map<String, dynamic> decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final String state = (decoded['state'] ?? '').toString().trim().toLowerCase();
+    final prefs = await SharedPreferences.getInstance();
+
+    if (state == 'normal') {
+      currentSosId = null;
+      await prefs.remove('active_sos_id');
+      return decoded;
+    }
+
+    final dynamic activeSos = decoded['active_sos'];
+    if (activeSos is Map<String, dynamic>) {
+      final String? sosId = activeSos['sos_id']?.toString();
+      if (sosId != null && sosId.isNotEmpty) {
+        currentSosId = sosId;
+        await prefs.setString('active_sos_id', sosId);
+      }
+    }
+
+    return decoded;
+  }
+
   Future<Map<String, dynamic>> uploadAudioChunk(int chunkIndex, String filePath) async {
     final token = await AuthService.instance.getToken();
     if (token == null || token.isEmpty) {

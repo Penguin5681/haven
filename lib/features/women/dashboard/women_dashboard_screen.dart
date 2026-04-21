@@ -16,6 +16,7 @@ import '../../../core/services/fake_call_service.dart';
 import '../../../core/services/sos_service.dart';
 import 'trusted_contact.dart';
 import 'trusted_contacts_store.dart';
+import 'safe_routes_tab.dart';
 import 'trusted_contacts_ui.dart';
 import 'women_profile_tab.dart';
 
@@ -156,6 +157,10 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
     setState(() => _selectedIndex = 1);
   }
 
+  void _openRoutesTab() {
+    setState(() => _selectedIndex = 2);
+  }
+
   void _openProfileTab() {
     setState(() => _selectedIndex = 3);
   }
@@ -183,6 +188,7 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
               isLoadingContacts: _isLoadingContacts,
               onAddContact: _addTrustedContact,
               onOpenContacts: _openContactsTab,
+              onOpenRoutes: _openRoutesTab,
               onOpenProfile: _openProfileTab,
             ),
             TrustedContactsTab(
@@ -191,7 +197,7 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
               onAddContact: _addTrustedContact,
               onDeleteContact: _removeTrustedContact,
             ),
-            const _MapTab(),
+            const SafeRoutesTab(),
             WomenProfileTab(onProfileUpdated: _handleProfileUpdated),
           ],
         ),
@@ -263,6 +269,7 @@ class _HomeTab extends StatefulWidget {
   final bool isLoadingContacts;
   final VoidCallback onAddContact;
   final VoidCallback onOpenContacts;
+  final VoidCallback onOpenRoutes;
   final VoidCallback onOpenProfile;
 
   const _HomeTab({
@@ -272,6 +279,7 @@ class _HomeTab extends StatefulWidget {
     required this.isLoadingContacts,
     required this.onAddContact,
     required this.onOpenContacts,
+    required this.onOpenRoutes,
     required this.onOpenProfile,
   });
 
@@ -282,6 +290,7 @@ class _HomeTab extends StatefulWidget {
 class _HomeTabState extends State<_HomeTab>
   with TickerProviderStateMixin, WidgetsBindingObserver {
   static const Duration _sosChunkDuration = Duration(seconds: 20);
+  static const Duration _sosStatePollInterval = Duration(seconds: 8);
   static const MethodChannel _sosSetupChannel = MethodChannel('haven/sos_setup');
   static const MethodChannel _audioChunkChannel = MethodChannel('haven/audio_chunks');
 
@@ -304,6 +313,8 @@ class _HomeTabState extends State<_HomeTab>
   bool _isSosChunkUploadInFlight = false;
 
   Timer? _recordingStatusTimer;
+  Timer? _sosStateTimer;
+  bool _isSosStateCheckInFlight = false;
 
   late final AnimationController _pulse;
   late final AnimationController _hold;
@@ -316,6 +327,7 @@ class _HomeTabState extends State<_HomeTab>
     _loadProfile();
     _refreshSosSetupStatus();
     _syncAudioRecordingState();
+    _startSosStateWatch();
 
     _pulse = AnimationController(
       vsync: this,
@@ -350,6 +362,7 @@ class _HomeTabState extends State<_HomeTab>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _sosStateTimer?.cancel();
     _stopSosAudioStreaming();
     _recordingStatusTimer?.cancel();
     _sosChunkTimer?.cancel();
@@ -364,6 +377,57 @@ class _HomeTabState extends State<_HomeTab>
     if (state == AppLifecycleState.resumed) {
       _refreshSosSetupStatus();
       _syncAudioRecordingState();
+      _checkSosStateAndEnforceRecording();
+    }
+  }
+
+  void _startSosStateWatch() {
+    _sosStateTimer?.cancel();
+    _sosStateTimer = Timer.periodic(_sosStatePollInterval, (_) {
+      _checkSosStateAndEnforceRecording();
+    });
+    _checkSosStateAndEnforceRecording();
+  }
+
+  Future<void> _checkSosStateAndEnforceRecording() async {
+    if (_isSosStateCheckInFlight) {
+      return;
+    }
+
+    _isSosStateCheckInFlight = true;
+    try {
+      final Map<String, dynamic> stateData = await SosService.instance.getSosState();
+      final String state = (stateData['state'] ?? '').toString().trim().toLowerCase();
+      if (state == 'normal') {
+        await _forceStopBackgroundVoiceRecording();
+      }
+    } catch (_) {
+      // Keep existing behavior when state checks fail due to connectivity.
+    } finally {
+      _isSosStateCheckInFlight = false;
+    }
+  }
+
+  Future<void> _forceStopBackgroundVoiceRecording() async {
+    bool needsSync = false;
+
+    if (_isSosAudioStreaming) {
+      await _stopSosAudioStreaming(uploadFinalChunk: false);
+      needsSync = true;
+    }
+
+    final bool shouldStopChunkRecording =
+        _isChunkRecording || await _audioChunkChannel.invokeMethod<bool>('isChunkRecording') == true;
+
+    if (shouldStopChunkRecording) {
+      try {
+        await _audioChunkChannel.invokeMethod<bool>('stopChunkRecording');
+      } catch (_) {}
+      needsSync = true;
+    }
+
+    if (needsSync && mounted) {
+      await _syncAudioRecordingState();
     }
   }
 
@@ -952,6 +1016,7 @@ class _HomeTabState extends State<_HomeTab>
             isLoadingContacts: widget.isLoadingContacts,
             onAddContact: widget.onAddContact,
             onOpenContacts: widget.onOpenContacts,
+            onOpenRoutes: widget.onOpenRoutes,
             onRecordAudioTap: _toggleAudioChunkRecording,
             onOpenRecordings: _openRecordingsScreen,
             isChunkRecording: _isChunkRecording,
@@ -1546,6 +1611,7 @@ class _ScrollZone extends StatelessWidget {
   final bool isLoadingContacts;
   final VoidCallback onAddContact;
   final VoidCallback onOpenContacts;
+  final VoidCallback onOpenRoutes;
   final VoidCallback onRecordAudioTap;
   final VoidCallback onOpenRecordings;
   final bool isChunkRecording;
@@ -1558,6 +1624,7 @@ class _ScrollZone extends StatelessWidget {
     required this.isLoadingContacts,
     required this.onAddContact,
     required this.onOpenContacts,
+    required this.onOpenRoutes,
     required this.onRecordAudioTap,
     required this.onOpenRecordings,
     required this.isChunkRecording,
@@ -1577,6 +1644,7 @@ class _ScrollZone extends StatelessWidget {
         const SizedBox(height: 12),
         _TertiaryGrid(
           onRecordAudioTap: onRecordAudioTap,
+          onOpenRoutesTap: onOpenRoutes,
           isChunkRecording: isChunkRecording,
           recordingElapsedLabel: recordingElapsedLabel,
         ),
@@ -1641,11 +1709,13 @@ class _SectionLabel extends StatelessWidget {
 // ── Tertiary 2-col grid  (Record Audio + Safe Places)
 class _TertiaryGrid extends StatelessWidget {
   final VoidCallback onRecordAudioTap;
+  final VoidCallback onOpenRoutesTap;
   final bool isChunkRecording;
   final String recordingElapsedLabel;
 
   const _TertiaryGrid({
     required this.onRecordAudioTap,
+    required this.onOpenRoutesTap,
     required this.isChunkRecording,
     required this.recordingElapsedLabel,
   });
@@ -1676,7 +1746,7 @@ class _TertiaryGrid extends StatelessWidget {
               title: 'Safe Places',
               sub: 'Nearby verified safe zones',
               palette: _T.act[3],
-              onTap: () {},
+              onTap: onOpenRoutesTap,
             ),
           ),
         ),
@@ -2370,13 +2440,6 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
 // ─────────────────────────────────────────────────────────────────────────────
 // Placeholder tabs
 // ─────────────────────────────────────────────────────────────────────────────
-class _MapTab extends StatelessWidget {
-  const _MapTab();
-  @override
-  Widget build(BuildContext context) =>
-      const _TabPlaceholder(icon: Icons.map_rounded, label: 'Safe Routes');
-}
-
 class _TabPlaceholder extends StatelessWidget {
   final IconData icon;
   final String label;

@@ -14,7 +14,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
-        android:label="haven"
+        android:label="Haven"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
