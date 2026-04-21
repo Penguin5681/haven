@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/auth_service.dart';
 
 class AuthorityRegisterScreen extends StatefulWidget {
   final VoidCallback onSuccess;
@@ -40,16 +41,22 @@ class _AuthorityRegisterScreenState extends State<AuthorityRegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Dummy register call. 
-      // Ideally calling AuthService.instance.authoritySignup()
-      // Since we don't have authority API yet, we just simulate delay
-      await Future.delayed(const Duration(seconds: 2));
+      await AuthService.instance.authoritySignup(
+        name: _nameCtrl.text,
+        email: _emailCtrl.text,
+        phoneNumber: _phoneCtrl.text,
+        password: _passwordCtrl.text,
+        jurisdiction: _departmentCtrl.text,
+      );
       
-      // Auto login dummy logic
-      // await AuthService.instance.login(_emailCtrl.text, _passwordCtrl.text, role: 'authority');
-
       if (mounted) {
-        widget.onSuccess();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registered successfully. Awaiting approval.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop(); // Go back to login
       }
     } catch (e) {
       if (mounted) {

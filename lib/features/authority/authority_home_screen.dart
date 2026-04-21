@@ -4,6 +4,7 @@ import '../../core/widgets/auth_selection_screen.dart';
 import '../../core/widgets/login_screen.dart';
 import '../../core/services/auth_service.dart';
 import 'auth/authority_register_screen.dart';
+import 'dashboard/authority_dashboard_screen.dart';
 
 class AuthorityHomeScreen extends StatefulWidget {
   const AuthorityHomeScreen({super.key});
@@ -57,23 +58,7 @@ class _AuthorityHomeScreenState extends State<AuthorityHomeScreen> {
     }
 
     if (_isLoggedIn) {
-      return Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: const Text('Responder Dashboard'),
-          backgroundColor: AppColors.bluePrimary,
-          foregroundColor: Colors.white,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: _onLogout,
-            )
-          ],
-        ),
-        body: const Center(
-          child: Text('Authority Dashboard coming soon...'),
-        ),
-      );
+      return AuthorityDashboardScreen(onLogout: _onLogout);
     }
 
     return AuthSelectionScreen(
