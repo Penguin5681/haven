@@ -94,7 +94,7 @@ public final class FakeCallUiManager {
             nm.notify(NOTIFICATION_ID, builder.build());
         }
 
-        // Force immediate UI appearance while keeping full-screen notification fallback.
+        // TODO: Build better fake call UI
         startIncomingActivity(context, normalizedName, normalizedNum);
     }
 

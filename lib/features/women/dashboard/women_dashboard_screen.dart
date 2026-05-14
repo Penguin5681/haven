@@ -21,28 +21,84 @@ import 'trusted_contacts_ui.dart';
 import 'women_profile_tab.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Local design tokens  (light-mode only, extends AppColors without editing it)
+// Design Tokens  — "Haven" — Luxury Safety Palette
 // ─────────────────────────────────────────────────────────────────────────────
 abstract final class _T {
-  // Surfaces
-  static const Color pageBg       = Color(0xFFFBF6F9);   // warm near-white
+  // ── Surfaces
+  static const Color pageBg       = Color(0xFFFDF4F8);   // warm blush
+  static const Color pageBg2      = Color(0xFFF7EBF3);   // deeper blush accent
   static const Color card         = Color(0xFFFFFFFF);
-  static const Color cardBorder   = Color(0xFFF0E0EA);
+  static const Color cardBorder   = Color(0xFFF2D9EA);
+  static const Color cardShadow   = Color(0x12A0145A);
   static const Color headerBg     = Color(0xFFFFFFFF);
+  static const Color glassWhite   = Color(0xF2FFFFFF);   // frosted glass surface
 
-  // SOS
+  // ── Brand
+  static const Color roseDeep     = Color(0xFFA0145A);   // deep magenta rose
+  static const Color roseMid      = Color(0xFFCC2E7A);   // brand primary
+  static const Color roseSoft     = Color(0xFFEF6FA8);   // lighter accent
+  static const Color roseTint     = Color(0xFFFCE8F3);
+  static const Color rosePale     = Color(0xFFFFF0F8);
+
+  // ── SOS
   static const Color sosCore      = Color(0xFFD32F2F);
   static const Color sosDeep      = Color(0xFFB71C1C);
-  static const Color sosRing1     = Color(0x26D32F2F);   // 15 %
-  static const Color sosRing2     = Color(0x14D32F2F);   // 8 %
+  static const Color sosBright    = Color(0xFFFF5252);
+  static const Color sosRing1     = Color(0x30D32F2F);
+  static const Color sosRing2     = Color(0x16D32F2F);
+  static const Color sosRing3     = Color(0x09D32F2F);
 
-  // Action cards  [surface, icon-bg, icon-fg]
-  static const List<List<Color>> act = [
-    [Color(0xFFEFF6FF), Color(0xFFDCEEFD), Color(0xFF1565C0)], // Live Track
-    [Color(0xFFF0FDF4), Color(0xFFD1FAE5), Color(0xFF15803D)], // Fake Call
-    [Color(0xFFF5F3FF), Color(0xFFEDE9FE), Color(0xFF6D28D9)], // Record
-    [Color(0xFFFFF7ED), Color(0xFFFFEDD5), Color(0xFFB45309)], // Safe Places
+  // ── Action cards  [surface, icon-bg, icon-fg, gradient-start, gradient-end]
+  // Live Track
+  static const List<Color> actBlue = [
+    Color(0xFFEFF6FF), Color(0xFFD4E9FF), Color(0xFF1565C0),
+    Color(0xFFEFF6FF), Color(0xFFDBEEFF),
   ];
+  // Fake Call
+  static const List<Color> actGreen = [
+    Color(0xFFF0FDF4), Color(0xFFC8F0D8), Color(0xFF166534),
+    Color(0xFFF0FDF4), Color(0xFFD6FAE8),
+  ];
+  // Record
+  static const List<Color> actPurple = [
+    Color(0xFFF5F0FF), Color(0xFFE4D8FF), Color(0xFF5B21B6),
+    Color(0xFFF5F0FF), Color(0xFFEDE5FF),
+  ];
+  // Safe Places
+  static const List<Color> actAmber = [
+    Color(0xFFFFFBEB), Color(0xFFFFE9C0), Color(0xFF92400E),
+    Color(0xFFFFFBEB), Color(0xFFFFF0CC),
+  ];
+
+  // ── Utility
+  static const Color success      = Color(0xFF15803D);
+  static const Color warning      = Color(0xFFB45309);
+  static const Color info         = Color(0xFF1D4ED8);
+  static const Color textPrimary  = Color(0xFF1A0A12);
+  static const Color textSec      = Color(0xFF7A5068);
+  static const Color textMuted    = Color(0xFFB89AAC);
+
+  // ── Gradients
+  static const LinearGradient headerGrad = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFFFFFF), Color(0xFFFFF0F8)],
+  );
+  static const LinearGradient heroBg = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFFFDF4F8), Color(0xFFF7EBF3)],
+  );
+  static const LinearGradient roseGrad = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFCC2E7A), Color(0xFFA0145A)],
+  );
+  static const LinearGradient alertGrad = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFFF6B6B), Color(0xFFD32F2F)],
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,18 +174,14 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Remove contact?'),
-            content: Text(
-              'Remove ${contact.name} from your trusted contacts?',
-            ),
+            content: Text('Remove ${contact.name} from your trusted contacts?'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text('Cancel'),
               ),
               FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.redPrimary,
-                ),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.redPrimary),
                 onPressed: () => Navigator.of(context).pop(true),
                 child: const Text('Remove'),
               ),
@@ -153,17 +205,9 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
     );
   }
 
-  void _openContactsTab() {
-    setState(() => _selectedIndex = 1);
-  }
-
-  void _openRoutesTab() {
-    setState(() => _selectedIndex = 2);
-  }
-
-  void _openProfileTab() {
-    setState(() => _selectedIndex = 3);
-  }
+  void _openContactsTab()  => setState(() => _selectedIndex = 1);
+  void _openRoutesTab()    => setState(() => _selectedIndex = 2);
+  void _openProfileTab()   => setState(() => _selectedIndex = 3);
 
   void _handleProfileUpdated(Map<String, dynamic> _) {
     setState(() {
@@ -211,7 +255,7 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bottom Navigation
+// Bottom Navigation — frosted glass with gradient active pill
 // ─────────────────────────────────────────────────────────────────────────────
 class _BottomNav extends StatelessWidget {
   final int selectedIndex;
@@ -222,28 +266,42 @@ class _BottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _T.card,
-        border: Border(top: BorderSide(color: _T.cardBorder, width: 1)),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFFAFD), Color(0xFFFFFFFF)],
+        ),
+        border: Border(
+          top: BorderSide(color: _T.cardBorder.withAlpha(180), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _T.roseMid.withAlpha(14),
+            blurRadius: 20,
+            offset: const Offset(0, -6),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: GNav(
-            rippleColor: AppColors.roseTint,
-            hoverColor: AppColors.roseTint,
+            rippleColor: _T.roseTint,
+            hoverColor: _T.roseTint,
             gap: 6,
-            activeColor: AppColors.rosePrimary,
+            activeColor: _T.roseMid,
             iconSize: 22,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
-            duration: const Duration(milliseconds: 250),
-            tabBackgroundColor: AppColors.roseTint,
-            tabBorderRadius: 14,
-            color: AppColors.textSecondary,
-            textStyle: const TextStyle(
+            duration: const Duration(milliseconds: 280),
+            tabBackgroundColor: _T.roseTint,
+            tabBorderRadius: 16,
+            color: _T.textSec,
+            textStyle: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.rosePrimary,
+              fontWeight: FontWeight.w700,
+              color: _T.roseMid,
+              letterSpacing: 0.1,
             ),
             tabs: const [
               GButton(icon: Icons.home_rounded,   text: 'Home'),
@@ -288,7 +346,7 @@ class _HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<_HomeTab>
-  with TickerProviderStateMixin, WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   static const Duration _sosChunkDuration = Duration(seconds: 20);
   static const Duration _sosStatePollInterval = Duration(seconds: 8);
   static const MethodChannel _sosSetupChannel = MethodChannel('haven/sos_setup');
@@ -341,14 +399,12 @@ class _HomeTabState extends State<_HomeTab>
         if (s == AnimationStatus.completed) {
           HapticFeedback.heavyImpact();
           setState(() => _sosActive = true);
-          
           try {
             await SosService.instance.triggerSos();
             await _startSosAudioStreaming();
           } catch (e) {
             debugPrint('Error triggering SOS: $e');
           }
-
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) {
               setState(() => _sosActive = false);
@@ -390,45 +446,29 @@ class _HomeTabState extends State<_HomeTab>
   }
 
   Future<void> _checkSosStateAndEnforceRecording() async {
-    if (_isSosStateCheckInFlight) {
-      return;
-    }
-
+    if (_isSosStateCheckInFlight) return;
     _isSosStateCheckInFlight = true;
     try {
       final Map<String, dynamic> stateData = await SosService.instance.getSosState();
       final String state = (stateData['state'] ?? '').toString().trim().toLowerCase();
-      if (state == 'normal') {
-        await _forceStopBackgroundVoiceRecording();
-      }
-    } catch (_) {
-      // Keep existing behavior when state checks fail due to connectivity.
-    } finally {
-      _isSosStateCheckInFlight = false;
-    }
+      if (state == 'normal') await _forceStopBackgroundVoiceRecording();
+    } catch (_) {}
+    finally { _isSosStateCheckInFlight = false; }
   }
 
   Future<void> _forceStopBackgroundVoiceRecording() async {
     bool needsSync = false;
-
     if (_isSosAudioStreaming) {
       await _stopSosAudioStreaming(uploadFinalChunk: false);
       needsSync = true;
     }
-
     final bool shouldStopChunkRecording =
         _isChunkRecording || await _audioChunkChannel.invokeMethod<bool>('isChunkRecording') == true;
-
     if (shouldStopChunkRecording) {
-      try {
-        await _audioChunkChannel.invokeMethod<bool>('stopChunkRecording');
-      } catch (_) {}
+      try { await _audioChunkChannel.invokeMethod<bool>('stopChunkRecording'); } catch (_) {}
       needsSync = true;
     }
-
-    if (needsSync && mounted) {
-      await _syncAudioRecordingState();
-    }
+    if (needsSync && mounted) await _syncAudioRecordingState();
   }
 
   Future<void> _loadProfile() async {
@@ -443,24 +483,13 @@ class _HomeTabState extends State<_HomeTab>
   Future<void> _refreshSosSetupStatus() async {
     if (!mounted) return;
     setState(() => _isCheckingSosSetup = true);
-
     bool accessibilityEnabled = false;
     bool notificationEnabled = false;
-
-    try {
-      accessibilityEnabled =
-          await _sosSetupChannel.invokeMethod<bool>('isSosAccessibilityEnabled') ?? false;
-    } catch (_) {
-      accessibilityEnabled = false;
-    }
-
+    try { accessibilityEnabled = await _sosSetupChannel.invokeMethod<bool>('isSosAccessibilityEnabled') ?? false; } catch (_) {}
     try {
       final status = await Permission.notification.status;
       notificationEnabled = status.isGranted;
-    } catch (_) {
-      notificationEnabled = false;
-    }
-
+    } catch (_) {}
     if (!mounted) return;
     setState(() {
       _isAccessibilityEnabled = accessibilityEnabled;
@@ -471,18 +500,10 @@ class _HomeTabState extends State<_HomeTab>
 
   Future<void> _openAccessibilitySettings() async {
     bool opened = false;
-    try {
-      opened = await _sosSetupChannel.invokeMethod<bool>('openAccessibilitySettings') ?? false;
-    } catch (_) {
-      opened = false;
-    }
-
+    try { opened = await _sosSetupChannel.invokeMethod<bool>('openAccessibilitySettings') ?? false; } catch (_) {}
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not open Accessibility settings.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Could not open Accessibility settings.'), behavior: SnackBarBehavior.floating),
       );
     }
   }
@@ -497,18 +518,13 @@ class _HomeTabState extends State<_HomeTab>
     int elapsedMs = 0;
     String saveDirectory = '';
     String currentChunkPath = '';
-
     try {
-      final status = await _audioChunkChannel
-          .invokeMapMethod<String, dynamic>('getChunkRecordingStatus');
+      final status = await _audioChunkChannel.invokeMapMethod<String, dynamic>('getChunkRecordingStatus');
       isRecording = (status?['isRecording'] as bool?) ?? false;
       elapsedMs = (status?['elapsedMs'] as num?)?.toInt() ?? 0;
       saveDirectory = (status?['saveDirectory'] as String?) ?? '';
       currentChunkPath = (status?['currentChunkPath'] as String?) ?? '';
-    } catch (_) {
-      isRecording = false;
-    }
-
+    } catch (_) {}
     if (!mounted) return;
     setState(() {
       _isChunkRecording = isRecording;
@@ -516,58 +532,34 @@ class _HomeTabState extends State<_HomeTab>
       _recordingSaveDirectory = saveDirectory;
       _currentChunkPath = currentChunkPath;
     });
-
-    if (isRecording) {
-      _startRecordingStatusTimer();
-    } else {
-      _stopRecordingStatusTimer();
-    }
+    if (isRecording) _startRecordingStatusTimer();
+    else _stopRecordingStatusTimer();
   }
 
   Future<void> _startSosAudioStreaming() async {
-    if (_isSosAudioStreaming) {
-      return;
-    }
-
+    if (_isSosAudioStreaming) return;
     final micPermission = await Permission.microphone.request();
     if (!micPermission.isGranted) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Microphone permission is required for SOS audio streaming.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Microphone permission is required for SOS audio streaming.'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
-
-    setState(() {
-      _isSosAudioStreaming = true;
-      _sosChunkIndex = 0;
-    });
-
+    setState(() { _isSosAudioStreaming = true; _sosChunkIndex = 0; });
     try {
       await _beginSosChunkRecording();
-      _sosChunkTimer = Timer.periodic(_sosChunkDuration, (_) async {
-        await _rotateAndUploadSosChunk();
-      });
-
+      _sosChunkTimer = Timer.periodic(_sosChunkDuration, (_) async => _rotateAndUploadSosChunk());
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('SOS triggered. Live audio is now streaming to authorities.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('SOS triggered. Live audio is now streaming to authorities.'), behavior: SnackBarBehavior.floating),
       );
     } catch (e) {
       debugPrint('Failed to start SOS audio streaming: $e');
       await _stopSosAudioStreaming(uploadFinalChunk: false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not start SOS audio streaming: $e'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text('Could not start SOS audio streaming: $e'), behavior: SnackBarBehavior.floating),
       );
     }
   }
@@ -575,34 +567,21 @@ class _HomeTabState extends State<_HomeTab>
   Future<void> _beginSosChunkRecording() async {
     final Directory tmpDir = await getTemporaryDirectory();
     final Directory sosDir = Directory('${tmpDir.path}/sos_live_audio');
-    if (!await sosDir.exists()) {
-      await sosDir.create(recursive: true);
-    }
-
+    if (!await sosDir.exists()) await sosDir.create(recursive: true);
     final String path = '${sosDir.path}/chunk_${DateTime.now().millisecondsSinceEpoch}_$_sosChunkIndex.m4a';
     _activeSosChunkPath = path;
-
     await _sosAudioRecorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        sampleRate: 16000,
-        bitRate: 64000,
-      ),
+      const RecordConfig(encoder: AudioEncoder.aacLc, sampleRate: 16000, bitRate: 64000),
       path: path,
     );
   }
 
   Future<void> _rotateAndUploadSosChunk({bool restartRecording = true}) async {
-    if (!_isSosAudioStreaming || _isSosChunkUploadInFlight) {
-      return;
-    }
-
+    if (!_isSosAudioStreaming || _isSosChunkUploadInFlight) return;
     _isSosChunkUploadInFlight = true;
-
     try {
       final String? chunkPath = await _sosAudioRecorder.stop();
       final String? pathToUpload = chunkPath ?? _activeSosChunkPath;
-
       if (pathToUpload != null) {
         final File chunkFile = File(pathToUpload);
         if (await chunkFile.exists() && await chunkFile.length() > 0) {
@@ -611,55 +590,31 @@ class _HomeTabState extends State<_HomeTab>
           await chunkFile.delete();
         }
       }
-
-      if (_isSosAudioStreaming && restartRecording) {
-        await _beginSosChunkRecording();
-      }
+      if (_isSosAudioStreaming && restartRecording) await _beginSosChunkRecording();
     } catch (e) {
       debugPrint('SOS chunk upload failed: $e');
       if (_isSosAudioStreaming) {
-        try {
-          await _beginSosChunkRecording();
-        } catch (inner) {
-          debugPrint('SOS chunk recorder restart failed: $inner');
-        }
+        try { await _beginSosChunkRecording(); } catch (inner) { debugPrint('SOS chunk recorder restart failed: $inner'); }
       }
-    } finally {
-      _isSosChunkUploadInFlight = false;
-    }
+    } finally { _isSosChunkUploadInFlight = false; }
   }
 
   Future<void> _stopSosAudioStreaming({bool uploadFinalChunk = true}) async {
-    if (!_isSosAudioStreaming) {
-      return;
-    }
-
+    if (!_isSosAudioStreaming) return;
     _sosChunkTimer?.cancel();
     _sosChunkTimer = null;
-
     if (!uploadFinalChunk) {
       _isSosAudioStreaming = false;
-      try {
-        await _sosAudioRecorder.stop();
-      } catch (_) {}
+      try { await _sosAudioRecorder.stop(); } catch (_) {}
       return;
     }
-
-    try {
-      await _rotateAndUploadSosChunk(restartRecording: false);
-    } catch (_) {}
-
+    try { await _rotateAndUploadSosChunk(restartRecording: false); } catch (_) {}
     _isSosAudioStreaming = false;
   }
 
   void _startRecordingStatusTimer() {
-    if (_recordingStatusTimer?.isActive ?? false) {
-      return;
-    }
-    _recordingStatusTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => _syncAudioRecordingState(),
-    );
+    if (_recordingStatusTimer?.isActive ?? false) return;
+    _recordingStatusTimer = Timer.periodic(const Duration(seconds: 1), (_) => _syncAudioRecordingState());
   }
 
   void _stopRecordingStatusTimer() {
@@ -684,78 +639,39 @@ class _HomeTabState extends State<_HomeTab>
   Future<void> _toggleAudioChunkRecording() async {
     if (_isChunkRecording) {
       bool stopped = false;
-      try {
-        stopped = await _audioChunkChannel.invokeMethod<bool>('stopChunkRecording') ?? false;
-      } catch (_) {
-        stopped = false;
-      }
-
+      try { stopped = await _audioChunkChannel.invokeMethod<bool>('stopChunkRecording') ?? false; } catch (_) {}
       if (!mounted) return;
       if (stopped) {
         await _syncAudioRecordingState();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Audio recording stopped.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Audio recording stopped.'), behavior: SnackBarBehavior.floating));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not stop audio recording.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not stop audio recording.'), behavior: SnackBarBehavior.floating));
       }
       return;
     }
-
     final micPermission = await Permission.microphone.request();
     if (!micPermission.isGranted) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Microphone permission is required to record audio.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Microphone permission is required to record audio.'), behavior: SnackBarBehavior.floating));
       return;
     }
-
     bool started = false;
-    try {
-      started = await _audioChunkChannel.invokeMethod<bool>('startChunkRecording') ?? false;
-    } catch (_) {
-      started = false;
-    }
-
+    try { started = await _audioChunkChannel.invokeMethod<bool>('startChunkRecording') ?? false; } catch (_) {}
     if (!mounted) return;
     if (started) {
       await _syncAudioRecordingState();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Audio recording started. Splits into 20-second chunks on stop.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Audio recording started. Splits into 20-second chunks on stop.'), behavior: SnackBarBehavior.floating));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not start audio recording.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not start audio recording.'), behavior: SnackBarBehavior.floating));
     }
   }
 
   Future<void> _openRecordingsScreen() async {
     if (!mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _RecordingsScreen(saveDirectory: _recordingSaveDirectory),
-      ),
+      MaterialPageRoute<void>(builder: (_) => _RecordingsScreen(saveDirectory: _recordingSaveDirectory)),
     );
     await _syncAudioRecordingState();
   }
@@ -764,21 +680,10 @@ class _HomeTabState extends State<_HomeTab>
     final settings = await FakeCallService.loadSettings();
     final scheduled = await FakeCallService.scheduleNormalFakeCall(settings);
     if (!mounted) return;
-
     if (scheduled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Fake call scheduled in ${settings.normalDelaySeconds}s.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fake call scheduled in ${settings.normalDelaySeconds}s.'), behavior: SnackBarBehavior.floating));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not schedule fake call.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not schedule fake call.'), behavior: SnackBarBehavior.floating));
     }
   }
 
@@ -788,117 +693,64 @@ class _HomeTabState extends State<_HomeTab>
       if (!mounted) return;
       if (stopped) {
         setState(() => _isAngryFatherModeEnabled = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Angry father mode stopped.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Angry father mode stopped.'), behavior: SnackBarBehavior.floating));
       }
       return;
     }
-
     final settings = await FakeCallService.loadSettings();
     final started = await FakeCallService.startAngryFatherMode(settings);
     if (!mounted) return;
     if (started) {
       setState(() => _isAngryFatherModeEnabled = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Angry father mode started: ${settings.angryRepeatCount} calls, every ${settings.angryDelaySeconds}s.',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Angry father mode started: ${settings.angryRepeatCount} calls, every ${settings.angryDelaySeconds}s.'), behavior: SnackBarBehavior.floating));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not start angry father mode.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not start angry father mode.'), behavior: SnackBarBehavior.floating));
     }
   }
 
   Future<void> _shareLocation() async {
     if (!mounted) return;
-    
-    // Check location permissions
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permissions are denied')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are denied')));
         return;
       }
     }
-
     if (permission == LocationPermission.deniedForever) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location permissions are permanently denied, we cannot request permissions.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are permanently denied, we cannot request permissions.')));
       return;
     }
-
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fetching location...')),
-    );
-
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fetching location...')));
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      );
-      
+      Position position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
       final String mapUrl = 'https://maps.google.com/?q=${position.latitude},${position.longitude}';
       final String message = 'I need help! Here is my current location: $mapUrl';
-
       if (widget.trustedContacts.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No trusted contacts to share location with.')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No trusted contacts to share location with.')));
         return;
       }
-
       final List<String> phoneNumbers = widget.trustedContacts.map((c) {
         String num = c.phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
-        if (num.length == 10 && !num.startsWith('+')) {
-          num = '+91$num'; // Append default country code for India
-        }
+        if (num.length == 10 && !num.startsWith('+')) num = '+91$num';
         return num;
       }).toList();
-      
-      // WhatsApp does not support multiple comma-separated numbers in SMS intents well.
-      // However, making sure they have the country code is the main issue.
       final String phonesStr = phoneNumbers.join(',');
-      
-      final Uri smsUri = Uri(
-        scheme: 'sms',
-        path: phonesStr,
-        queryParameters: <String, String>{
-          'body': message,
-        },
-      );
-
+      final Uri smsUri = Uri(scheme: 'sms', path: phonesStr, queryParameters: <String, String>{'body': message});
       if (await canLaunchUrl(smsUri)) {
         await launchUrl(smsUri);
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open SMS app')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open SMS app')));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     }
   }
 
@@ -907,54 +759,49 @@ class _HomeTabState extends State<_HomeTab>
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: _T.glassWhite,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Fake Calling',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(gradient: _T.roseGrad, borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.phone_rounded, color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Fake Calling', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _T.textPrimary, letterSpacing: -0.3)),
+                      Text('Uses your configured delays', style: TextStyle(fontSize: 12, color: _T.textSec)),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'Runs using your configured delays from Settings.',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              const SizedBox(height: 16),
+              _SheetTile(
+                icon: Icons.phone_in_talk_rounded,
+                title: 'Normal Fake Call',
+                subtitle: 'Single delayed call',
+                color: _T.actGreen[2],
+                bg: _T.actGreen[0],
+                onTap: () async { Navigator.of(context).pop(); await _handleNormalFakeCall(); },
               ),
-              const SizedBox(height: 12),
-              ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                tileColor: const Color(0xFFF0FDF4),
-                leading: const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF15803D)),
-                title: const Text('Normal Fake Call'),
-                subtitle: const Text('Single delayed call'),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await _handleNormalFakeCall();
-                },
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                tileColor: const Color(0xFFFFF7ED),
-                leading: Icon(
-                  _isAngryFatherModeEnabled ? Icons.pause_circle_filled : Icons.record_voice_over_rounded,
-                  color: const Color(0xFFB45309),
-                ),
-                title: Text(
-                  _isAngryFatherModeEnabled ? 'Stop Angry Father Mode' : 'Start Angry Father Mode',
-                ),
-                subtitle: const Text('Repeated delayed fake calls'),
-                onTap: () async {
-                  Navigator.of(context).pop();
-                  await _toggleAngryFatherMode();
-                },
+              const SizedBox(height: 10),
+              _SheetTile(
+                icon: _isAngryFatherModeEnabled ? Icons.pause_circle_filled : Icons.record_voice_over_rounded,
+                title: _isAngryFatherModeEnabled ? 'Stop Angry Father Mode' : 'Start Angry Father Mode',
+                subtitle: 'Repeated delayed fake calls',
+                color: _T.actAmber[2],
+                bg: _T.actAmber[0],
+                onTap: () async { Navigator.of(context).pop(); await _toggleAngryFatherMode(); },
               ),
             ],
           ),
@@ -990,11 +837,7 @@ class _HomeTabState extends State<_HomeTab>
           ),
           SizedBox(
             height: h * 0.38,
-            child: _SOSHero(
-              pulse: _pulse,
-              hold: _hold,
-              active: _sosActive,
-            ),
+            child: _SOSHero(pulse: _pulse, hold: _hold, active: _sosActive),
           ),
           _PrimarySecondaryRow(
             onFakeCallTap: _openFakeCallActionSheet,
@@ -1031,8 +874,55 @@ class _HomeTabState extends State<_HomeTab>
   }
 }
 
+// ── Sheet tile helper (for fake call bottom sheet)
+class _SheetTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final Color bg;
+  final VoidCallback onTap;
+  const _SheetTile({required this.icon, required this.title, required this.subtitle, required this.color, required this.bg, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _T.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: TextStyle(fontSize: 12, color: _T.textSec)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: _T.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. Header
+// 1. Header — gradient background with floating avatar
 // ─────────────────────────────────────────────────────────────────────────────
 class _Header extends StatelessWidget {
   final double topPad;
@@ -1049,42 +939,51 @@ class _Header extends StatelessWidget {
     required this.onLogout,
   });
 
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: _T.headerBg,
-      padding: EdgeInsets.only(
-        top: topPad + 10,
-        bottom: 12,
-        left: 20,
-        right: 16,
+      decoration: BoxDecoration(
+        gradient: _T.headerGrad,
+        border: Border(bottom: BorderSide(color: _T.cardBorder.withAlpha(120), width: 1)),
       ),
+      padding: EdgeInsets.only(top: topPad + 12, bottom: 14, left: 20, right: 16),
       child: Row(
         children: [
           _Avatar(photoUrl: photoUrl),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: isLoading
-                ? _Shimmer(width: 120, height: 14)
-                : RichText(
-                    text: TextSpan(
-                      style: const TextStyle(color: AppColors.textPrimary),
-                      children: [
-                        TextSpan(
-                          text: 'Hi, $name',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.4,
+                ? _Shimmer(width: 130, height: 14)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _greeting(),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _T.roseMid, letterSpacing: 0.4),
+                      ),
+                      const SizedBox(height: 1),
+                      Row(
+                        children: [
+                          Text(
+                            name,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _T.textPrimary, letterSpacing: -0.5),
                           ),
-                        ),
-                        const TextSpan(text: '  👋'),
-                      ],
-                    ),
+                          const SizedBox(width: 5),
+                          const Text('👋', style: TextStyle(fontSize: 16)),
+                        ],
+                      ),
+                    ],
                   ),
           ),
           _HeaderBtn(icon: Icons.notifications_outlined, onTap: () {}),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           _HeaderBtn(icon: Icons.logout_rounded, onTap: onLogout),
         ],
       ),
@@ -1099,20 +998,23 @@ class _Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.roseLight, width: 2),
+        gradient: _T.roseGrad,
+        boxShadow: [BoxShadow(color: _T.roseMid.withAlpha(60), blurRadius: 10, offset: const Offset(0, 4))],
       ),
-      child: ClipOval(
-        child: photoUrl != null
-            ? Image.network(photoUrl!, fit: BoxFit.cover)
-            : Container(
-                color: AppColors.roseTint,
-                child: const Icon(Icons.person_rounded,
-                    color: AppColors.rosePrimary, size: 20),
-              ),
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: ClipOval(
+          child: photoUrl != null
+              ? Image.network(photoUrl!, fit: BoxFit.cover)
+              : Container(
+                  decoration: const BoxDecoration(color: _T.roseTint),
+                  child: const Icon(Icons.person_rounded, color: _T.roseMid, size: 22),
+                ),
+        ),
       ),
     );
   }
@@ -1128,21 +1030,22 @@ class _HeaderBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36,
-        height: 36,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
           color: _T.pageBg,
           shape: BoxShape.circle,
           border: Border.all(color: _T.cardBorder),
+          boxShadow: [BoxShadow(color: _T.cardShadow, blurRadius: 6, offset: const Offset(0, 2))],
         ),
-        child: Icon(icon, size: 18, color: AppColors.textSecondary),
+        child: Icon(icon, size: 18, color: _T.textSec),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. SOS Hero
+// 3. SOS Hero — dramatic with multi-ring pulse
 // ─────────────────────────────────────────────────────────────────────────────
 class _SOSHero extends StatelessWidget {
   final AnimationController pulse;
@@ -1152,23 +1055,55 @@ class _SOSHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          active
-              ? '🚨  Emergency alert sent!'
-              : 'Press & hold 3 s in an emergency',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: active ? AppColors.redPrimary : AppColors.textSecondary,
-            letterSpacing: 0.2,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: _T.heroBg,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: active
+                ? Container(
+                    key: const ValueKey('active'),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: _T.alertGrad,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [BoxShadow(color: _T.sosCore.withAlpha(70), blurRadius: 12, offset: const Offset(0, 4))],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.white, size: 14),
+                        SizedBox(width: 6),
+                        Text('🚨  Emergency alert sent!', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                      ],
+                    ),
+                  )
+                : Container(
+                    key: const ValueKey('idle'),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _T.roseTint,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: _T.roseSoft.withAlpha(80)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.touch_app_rounded, color: _T.roseMid, size: 13),
+                        const SizedBox(width: 6),
+                        Text('Hold 3 seconds in an emergency', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _T.roseMid)),
+                      ],
+                    ),
+                  ),
           ),
-        ),
-        const SizedBox(height: 22),
-        _SOSButtonCore(pulse: pulse, hold: hold, active: active),
-      ],
+          const SizedBox(height: 28),
+          _SOSButtonCore(pulse: pulse, hold: hold, active: active),
+        ],
+      ),
     );
   }
 }
@@ -1182,13 +1117,8 @@ class _SOSButtonCore extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPressStart: (_) {
-        HapticFeedback.mediumImpact();
-        hold.forward();
-      },
-      onLongPressEnd: (_) {
-        if (hold.status != AnimationStatus.completed) hold.reverse();
-      },
+      onLongPressStart: (_) { HapticFeedback.mediumImpact(); hold.forward(); },
+      onLongPressEnd: (_) { if (hold.status != AnimationStatus.completed) hold.reverse(); },
       onLongPressCancel: () => hold.reverse(),
       child: AnimatedBuilder(
         animation: Listenable.merge([pulse, hold]),
@@ -1199,68 +1129,91 @@ class _SOSButtonCore extends StatelessWidget {
           return Stack(
             alignment: Alignment.center,
             children: [
-              // Outer aura — breathes with pulse
+              // Outermost subtle aura
               Container(
-                width: 182 + (pv * 14),
-                height: 182 + (pv * 14),
+                width: 210 + (pv * 16),
+                height: 210 + (pv * 16),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _T.sosRing2.withAlpha((pv * 50).toInt()),
+                  color: _T.sosRing3.withAlpha((pv * 35).toInt()),
                 ),
               ),
-              // Mid ring
+              // Second ring
+              Container(
+                width: 188 + (pv * 10),
+                height: 188 + (pv * 10),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _T.sosRing2.withAlpha((pv * 55).toInt()),
+                ),
+              ),
+              // Inner ring
               Container(
                 width: 168,
                 height: 168,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _T.sosRing1.withAlpha((pv * 70 + 20).toInt()),
+                  color: _T.sosRing1.withAlpha((pv * 75 + 20).toInt()),
                 ),
               ),
-              // Core
+              // Core button
               Container(
-                width: 140,
-                height: 140,
+                width: 144,
+                height: 144,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: active
-                        ? [const Color(0xFFEF5350), _T.sosDeep]
+                        ? [_T.sosBright, _T.sosDeep]
                         : [
-                            Color.lerp(
-                                const Color(0xFFEF5350),
-                                const Color(0xFFE53935),
-                                hv)!,
+                            Color.lerp(const Color(0xFFFF5252), const Color(0xFFEF5350), hv)!,
                             Color.lerp(_T.sosCore, _T.sosDeep, hv)!,
                           ],
-                    center: const Alignment(-0.3, -0.3),
-                    radius: 1.2,
+                    center: const Alignment(-0.3, -0.35),
+                    radius: 1.3,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: _T.sosCore
-                          .withAlpha((70 + (hv * 110).toInt())),
-                      blurRadius: 22 + (hv * 18),
-                      spreadRadius: 2 + (hv * 6),
+                      color: _T.sosCore.withAlpha((60 + (hv * 120).toInt())),
+                      blurRadius: 24 + (hv * 20),
+                      spreadRadius: 2 + (hv * 8),
                     ),
-                    const BoxShadow(
-                      color: Color(0x14000000),
+                    BoxShadow(
+                      color: _T.sosCore.withAlpha(30),
                       blurRadius: 8,
-                      offset: Offset(0, 4),
+                      spreadRadius: 0,
+                      offset: const Offset(0, 6),
                     ),
+                    const BoxShadow(color: Color(0x1A000000), blurRadius: 10, offset: Offset(0, 5)),
                   ],
                 ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
+                    // Inner highlight
+                    Positioned(
+                      top: 12,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          width: 80,
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(22),
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                      ),
+                    ),
                     if (hv > 0)
                       SizedBox(
-                        width: 140,
-                        height: 140,
+                        width: 144,
+                        height: 144,
                         child: CircularProgressIndicator(
                           value: hv,
-                          strokeWidth: 4,
-                          color: Colors.white.withAlpha(200),
+                          strokeWidth: 4.5,
+                          color: Colors.white.withAlpha(210),
                           backgroundColor: Colors.transparent,
                           strokeCap: StrokeCap.round,
                         ),
@@ -1271,21 +1224,23 @@ class _SOSButtonCore extends StatelessWidget {
                         Text(
                           'SOS',
                           style: const TextStyle(
-                            fontSize: 40,
+                            fontSize: 42,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
-                            letterSpacing: 4,
+                            letterSpacing: 5,
                             height: 1,
+                            shadows: [Shadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 2))],
                           ),
                         ),
                         if (hv > 0.04) ...[
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 5),
                           Text(
                             '${((1 - hv) * 3).ceil()}s',
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 13,
                               color: Colors.white70,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ],
@@ -1303,7 +1258,7 @@ class _SOSButtonCore extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. Primary Secondary Actions  (Share Location + Fake Call)
+// 4. Primary Actions — gradient pills
 // ─────────────────────────────────────────────────────────────────────────────
 class _PrimarySecondaryRow extends StatelessWidget {
   final VoidCallback onFakeCallTap;
@@ -1319,27 +1274,33 @@ class _PrimarySecondaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
       child: Row(
         children: [
           Expanded(
-            child: _PillAction(
+            child: _GradientPillAction(
               icon: Icons.near_me_rounded,
               label: 'Share Location',
-              color: _T.act[0][2],
-              bg: _T.act[0][0],
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
+              ),
               onTap: onShareLocationTap,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: _PillAction(
+            child: _GradientPillAction(
               icon: isAngryFatherModeEnabled
                   ? Icons.record_voice_over_rounded
                   : Icons.phone_in_talk_rounded,
               label: isAngryFatherModeEnabled ? 'Angry Mode On' : 'Fake Call',
-              color: _T.act[1][2],
-              bg: _T.act[1][0],
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+              ),
               onTap: onFakeCallTap,
             ),
           ),
@@ -1349,40 +1310,56 @@ class _PrimarySecondaryRow extends StatelessWidget {
   }
 }
 
-class _IncompleteProfilePrompt extends StatelessWidget {
+class _GradientPillAction extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final LinearGradient gradient;
   final VoidCallback onTap;
+  const _GradientPillAction({required this.icon, required this.label, required this.gradient, required this.onTap});
 
-  const _IncompleteProfilePrompt({required this.onTap});
+  @override
+  State<_GradientPillAction> createState() => _GradientPillActionState();
+}
+
+class _GradientPillActionState extends State<_GradientPillAction> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
+  late final Animation<double> _scale =
+      Tween<double>(begin: 1, end: 0.96).animate(CurvedAnimation(parent: _c, curve: Curves.easeOut));
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          padding: const EdgeInsets.all(12),
+    return GestureDetector(
+      onTapDown: (_) { _c.forward(); HapticFeedback.selectionClick(); },
+      onTapUp: (_) { _c.reverse(); widget.onTap(); },
+      onTapCancel: () => _c.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF7ED),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFFFD6A8)),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.info_outline_rounded, color: Color(0xFFB45309)),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Your profile is incomplete. Tap to add missing details.',
-                  style: TextStyle(
-                    color: Color(0xFF92400E),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
+            gradient: widget.gradient,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: (widget.gradient.colors.first).withAlpha(70),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
               ),
-              Icon(Icons.chevron_right_rounded, color: Color(0xFF92400E)),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(widget.icon, color: Colors.white, size: 19),
+              const SizedBox(width: 8),
+              Text(
+                widget.label,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.2),
+              ),
             ],
           ),
         ),
@@ -1391,6 +1368,54 @@ class _IncompleteProfilePrompt extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Incomplete Profile Prompt
+// ─────────────────────────────────────────────────────────────────────────────
+class _IncompleteProfilePrompt extends StatelessWidget {
+  final VoidCallback onTap;
+  const _IncompleteProfilePrompt({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFF8E1), Color(0xFFFFF3C4)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFFFE082)),
+            boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withAlpha(25), blurRadius: 10, offset: const Offset(0, 4))],
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, color: Color(0xFFB45309), size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Your profile is incomplete. Tap to add missing details.',
+                  style: TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w600, fontSize: 12, height: 1.4),
+                ),
+              ),
+              Icon(Icons.arrow_forward_rounded, color: Color(0xFF92400E), size: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SOS Setup Status Card — refined glassmorphism
+// ─────────────────────────────────────────────────────────────────────────────
 class _SosSetupStatusCard extends StatelessWidget {
   final bool isLoading;
   final bool accessibilityEnabled;
@@ -1410,94 +1435,131 @@ class _SosSetupStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool allGood = accessibilityEnabled && notificationEnabled;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFEFF6FF),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFBFDBFE)),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: allGood
+                ? [const Color(0xFFF0FDF4), const Color(0xFFDCFCE7)]
+                : [const Color(0xFFEFF6FF), const Color(0xFFDBEEFF)],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: allGood ? const Color(0xFF86EFAC) : const Color(0xFF93C5FD),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: allGood ? const Color(0xFF16A34A).withAlpha(18) : const Color(0xFF3B82F6).withAlpha(18),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.settings_accessibility_rounded, color: Color(0xFF1D4ED8)),
-                const SizedBox(width: 8),
-                const Expanded(
+                Container(
+                  width: 32, height: 32,
+                  decoration: BoxDecoration(
+                    color: allGood ? const Color(0xFF16A34A).withAlpha(25) : const Color(0xFF3B82F6).withAlpha(25),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(
+                    allGood ? Icons.shield_rounded : Icons.settings_accessibility_rounded,
+                    color: allGood ? const Color(0xFF16A34A) : const Color(0xFF1D4ED8),
+                    size: 17,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
                   child: Text(
-                    'SOS Setup Status',
+                    allGood ? 'SOS Ready' : 'SOS Setup Status',
                     style: TextStyle(
-                      color: Color(0xFF1E3A8A),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
+                      color: allGood ? const Color(0xFF166534) : const Color(0xFF1E3A8A),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ),
-                InkWell(
+                GestureDetector(
                   onTap: onRefresh,
-                  borderRadius: BorderRadius.circular(14),
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(Icons.refresh_rounded, size: 18, color: Color(0xFF1D4ED8)),
+                  child: Container(
+                    width: 30, height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(180),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.refresh_rounded,
+                      size: 16,
+                      color: allGood ? const Color(0xFF16A34A) : const Color(0xFF1D4ED8),
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             if (isLoading)
-              const Text(
-                'Checking service and permissions...',
-                style: TextStyle(fontSize: 12, color: Color(0xFF334155)),
+              Row(
+                children: [
+                  SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: const Color(0xFF1D4ED8))),
+                  const SizedBox(width: 10),
+                  const Text('Checking permissions...', style: TextStyle(fontSize: 12, color: Color(0xFF334155))),
+                ],
               )
             else ...[
-              _SetupStatusRow(
-                label: 'Accessibility service',
-                isEnabled: accessibilityEnabled,
-              ),
-              const SizedBox(height: 6),
-              _SetupStatusRow(
-                label: 'Notification permission',
-                isEnabled: notificationEnabled,
-              ),
-              const SizedBox(height: 10),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final buttonWidth = (constraints.maxWidth - 8) / 2;
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      SizedBox(
-                        width: buttonWidth,
-                        child: OutlinedButton.icon(
-                          onPressed: onOpenAccessibilitySettings,
-                          icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                          label: const Text('Accessibility', style: TextStyle(fontSize: 12.5),),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF1D4ED8),
-                            side: const BorderSide(color: Color(0xFF93C5FD)),
+              _SetupStatusRow(label: 'Accessibility service', isEnabled: accessibilityEnabled),
+              const SizedBox(height: 7),
+              _SetupStatusRow(label: 'Notification permission', isEnabled: notificationEnabled),
+              if (!allGood) ...[
+                const SizedBox(height: 12),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final buttonWidth = (constraints.maxWidth - 8) / 2;
+                    return Wrap(
+                      spacing: 8, runSpacing: 8,
+                      children: [
+                        SizedBox(
+                          width: buttonWidth,
+                          child: OutlinedButton.icon(
+                            onPressed: onOpenAccessibilitySettings,
+                            icon: const Icon(Icons.open_in_new_rounded, size: 14),
+                            label: const Text('Accessibility', style: TextStyle(fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF1D4ED8),
+                              side: const BorderSide(color: Color(0xFF93C5FD)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(
-                        width: buttonWidth,
-                        child: FilledButton.icon(
-                          onPressed: notificationEnabled ? null : onRequestNotifications,
-                          icon: const Icon(Icons.notifications_active_rounded, size: 16),
-                          label: Text(notificationEnabled ? 'Allowed' : 'Allow'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF2563EB),
-                            disabledBackgroundColor: const Color(0xFF93C5FD),
+                        SizedBox(
+                          width: buttonWidth,
+                          child: FilledButton.icon(
+                            onPressed: notificationEnabled ? null : onRequestNotifications,
+                            icon: const Icon(Icons.notifications_active_rounded, size: 14),
+                            label: Text(notificationEnabled ? 'Allowed' : 'Allow'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF2563EB),
+                              disabledBackgroundColor: const Color(0xFF93C5FD),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ],
           ],
         ),
@@ -1509,27 +1571,29 @@ class _SosSetupStatusCard extends StatelessWidget {
 class _SetupStatusRow extends StatelessWidget {
   final String label;
   final bool isEnabled;
-
   const _SetupStatusRow({required this.label, required this.isEnabled});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(
-          isEnabled ? Icons.check_circle_rounded : Icons.error_outline_rounded,
-          size: 18,
-          color: isEnabled ? const Color(0xFF15803D) : const Color(0xFFB45309),
+        Container(
+          width: 22, height: 22,
+          decoration: BoxDecoration(
+            color: isEnabled ? const Color(0xFF16A34A).withAlpha(20) : const Color(0xFFB45309).withAlpha(20),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            isEnabled ? Icons.check_rounded : Icons.priority_high_rounded,
+            size: 14,
+            color: isEnabled ? const Color(0xFF15803D) : const Color(0xFFB45309),
+          ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
             '$label: ${isEnabled ? 'Enabled' : 'Not enabled'}',
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF334155),
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -1537,74 +1601,8 @@ class _SetupStatusRow extends StatelessWidget {
   }
 }
 
-class _PillAction extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final Color bg;
-  final VoidCallback onTap;
-  const _PillAction({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.bg,
-    required this.onTap,
-  });
-  @override
-  State<_PillAction> createState() => _PillActionState();
-}
-
-class _PillActionState extends State<_PillAction>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 90));
-  late final Animation<double> _scale =
-      Tween<double>(begin: 1, end: 0.96).animate(
-    CurvedAnimation(parent: _c, curve: Curves.easeOut),
-  );
-
-  @override
-  void dispose() { _c.dispose(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) { _c.forward(); HapticFeedback.selectionClick(); },
-      onTapUp: (_) { _c.reverse(); widget.onTap(); },
-      onTapCancel: () => _c.reverse(),
-      child: ScaleTransition(
-        scale: _scale,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-          decoration: BoxDecoration(
-            color: widget.bg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: widget.color.withAlpha(40)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(widget.icon, color: widget.color, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: widget.color,
-                  letterSpacing: 0.1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. Scroll Zone  (tertiary — requires intentional scrolling)
+// 5. Scroll Zone
 // ─────────────────────────────────────────────────────────────────────────────
 class _ScrollZone extends StatelessWidget {
   final List<TrustedContact> trustedContacts;
@@ -1640,73 +1638,68 @@ class _ScrollZone extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-        const _SectionLabel('More Tools'),
-        const SizedBox(height: 12),
-        _TertiaryGrid(
-          onRecordAudioTap: onRecordAudioTap,
-          onOpenRoutesTap: onOpenRoutes,
-          isChunkRecording: isChunkRecording,
-          recordingElapsedLabel: recordingElapsedLabel,
-        ),
-        const SizedBox(height: 10),
-        _RecordingStatePanel(
-          isChunkRecording: isChunkRecording,
-          recordingElapsedLabel: recordingElapsedLabel,
-          recordingSaveDirectory: recordingSaveDirectory,
-          currentChunkPath: currentChunkPath,
-          onOpenRecordings: onOpenRecordings,
-        ),
-        const SizedBox(height: 24),
-        const _SectionLabel('Trusted Contacts'),
-        const SizedBox(height: 12),
-        TrustedContactsPreview(
-          contacts: trustedContacts,
-          isLoading: isLoadingContacts,
-          onAddContact: onAddContact,
-          onOpenContacts: onOpenContacts,
-        ),
-        const SizedBox(height: 24),
-        const _SectionLabel('Safety Tip'),
-        const SizedBox(height: 12),
-        const _TipCard(),
+          const _SectionLabel('More Tools'),
+          const SizedBox(height: 12),
+          _TertiaryGrid(
+            onRecordAudioTap: onRecordAudioTap,
+            onOpenRoutesTap: onOpenRoutes,
+            isChunkRecording: isChunkRecording,
+            recordingElapsedLabel: recordingElapsedLabel,
+          ),
+          const SizedBox(height: 10),
+          _RecordingStatePanel(
+            isChunkRecording: isChunkRecording,
+            recordingElapsedLabel: recordingElapsedLabel,
+            recordingSaveDirectory: recordingSaveDirectory,
+            currentChunkPath: currentChunkPath,
+            onOpenRecordings: onOpenRecordings,
+          ),
+          const SizedBox(height: 26),
+          const _SectionLabel('Trusted Contacts'),
+          const SizedBox(height: 12),
+          TrustedContactsPreview(
+            contacts: trustedContacts,
+            isLoading: isLoadingContacts,
+            onAddContact: onAddContact,
+            onOpenContacts: onOpenContacts,
+          ),
+          const SizedBox(height: 26),
+          const _SectionLabel('Safety Tip'),
+          const SizedBox(height: 12),
+          const _TipCard(),
         ],
       ),
     );
   }
 }
 
-// ── Section label
 class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel(this.text);
+
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Container(
-          width: 3,
-          height: 15,
+          width: 4,
+          height: 18,
           decoration: BoxDecoration(
-            color: AppColors.rosePrimary,
+            gradient: _T.roseGrad,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
         Text(
           text,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-            letterSpacing: -0.1,
-          ),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _T.textPrimary, letterSpacing: -0.3),
         ),
       ],
     );
   }
 }
 
-// ── Tertiary 2-col grid  (Record Audio + Safe Places)
+// ── Tertiary Grid
 class _TertiaryGrid extends StatelessWidget {
   final VoidCallback onRecordAudioTap;
   final VoidCallback onOpenRoutesTap;
@@ -1730,10 +1723,9 @@ class _TertiaryGrid extends StatelessWidget {
             child: _TertiaryCard(
               icon: isChunkRecording ? Icons.stop_circle_rounded : Icons.mic_rounded,
               title: isChunkRecording ? 'Stop Recording' : 'Record Audio',
-              sub: isChunkRecording
-                  ? 'Recording • $recordingElapsedLabel'
-                  : 'Start covert background capture',
-              palette: _T.act[2],
+              sub: isChunkRecording ? '● Recording  $recordingElapsedLabel' : 'Start covert background capture',
+              palette: _T.actPurple,
+              isActive: isChunkRecording,
               onTap: onRecordAudioTap,
             ),
           ),
@@ -1745,7 +1737,8 @@ class _TertiaryGrid extends StatelessWidget {
               icon: Icons.shield_rounded,
               title: 'Safe Places',
               sub: 'Nearby verified safe zones',
-              palette: _T.act[3],
+              palette: _T.actAmber,
+              isActive: false,
               onTap: onOpenRoutesTap,
             ),
           ),
@@ -1755,6 +1748,85 @@ class _TertiaryGrid extends StatelessWidget {
   }
 }
 
+class _TertiaryCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String sub;
+  final List<Color> palette;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _TertiaryCard({
+    required this.icon,
+    required this.title,
+    required this.sub,
+    required this.palette,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [palette[3], palette[4]],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: palette[2].withAlpha(30)),
+          boxShadow: [
+            BoxShadow(
+              color: palette[2].withAlpha(isActive ? 35 : 18),
+              blurRadius: isActive ? 14 : 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [palette[1], palette[1].withAlpha(200)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: palette[2].withAlpha(30), blurRadius: 6, offset: const Offset(0, 2))],
+              ),
+              child: Icon(icon, color: palette[2], size: 20),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _T.textPrimary, letterSpacing: -0.2),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              sub,
+              style: TextStyle(
+                fontSize: 11,
+                color: isActive ? palette[2] : _T.textSec,
+                height: 1.4,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Recording State Panel
 class _RecordingStatePanel extends StatelessWidget {
   final bool isChunkRecording;
   final String recordingElapsedLabel;
@@ -1772,76 +1844,82 @@ class _RecordingStatePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = isChunkRecording ? const Color(0xFF15803D) : const Color(0xFF64748B);
-    final statusText = isChunkRecording ? 'ON' : 'OFF';
-
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _T.cardBorder),
+        boxShadow: [BoxShadow(color: _T.cardShadow, blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.multitrack_audio_rounded, color: statusColor, size: 18),
-              const SizedBox(width: 8),
+              Container(
+                width: 28, height: 28,
+                decoration: BoxDecoration(
+                  color: isChunkRecording ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.multitrack_audio_rounded,
+                  color: isChunkRecording ? _T.success : _T.textMuted,
+                  size: 15,
+                ),
+              ),
+              const SizedBox(width: 10),
               Text(
-                'Recording: $statusText',
+                isChunkRecording ? 'Recording Active' : 'Recording Off',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: statusColor,
+                  color: isChunkRecording ? _T.success : _T.textSec,
+                  letterSpacing: -0.1,
                 ),
               ),
+              if (isChunkRecording) ...[
+                const SizedBox(width: 8),
+                _PulseDot(),
+              ],
               const Spacer(),
-              Text(
-                recordingElapsedLabel,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF334155),
-                  fontWeight: FontWeight.w700,
+              if (isChunkRecording)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    recordingElapsedLabel,
+                    style: const TextStyle(fontSize: 12, color: _T.success, fontWeight: FontWeight.w800),
+                  ),
                 ),
-              ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             'Save folder: ${recordingSaveDirectory.isEmpty ? 'Not available yet' : recordingSaveDirectory}',
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF475569),
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-            ),
+            style: const TextStyle(fontSize: 11, color: _T.textSec, fontWeight: FontWeight.w500, height: 1.4),
           ),
           if (isChunkRecording && currentChunkPath.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 5),
             Text(
               'Current chunk: $currentChunkPath',
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF64748B),
-                height: 1.4,
-              ),
+              style: TextStyle(fontSize: 11, color: _T.textMuted, height: 1.4),
             ),
           ],
           const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: onOpenRecordings,
-              icon: const Icon(Icons.library_music_rounded, size: 16),
-              label: const Text('View Recordings'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF1D4ED8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-              ),
+          TextButton.icon(
+            onPressed: onOpenRecordings,
+            icon: const Icon(Icons.library_music_rounded, size: 15),
+            label: const Text('View Recordings'),
+            style: TextButton.styleFrom(
+              foregroundColor: _T.info,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
             ),
           ),
         ],
@@ -1850,9 +1928,39 @@ class _RecordingStatePanel extends StatelessWidget {
   }
 }
 
+// Animated pulsing dot for live recording
+class _PulseDot extends StatefulWidget {
+  @override
+  State<_PulseDot> createState() => _PulseDotState();
+}
+
+class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) => Container(
+        width: 7, height: 7,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Color.lerp(const Color(0xFF16A34A), const Color(0xFF4ADE80), _c.value),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recordings Screen
+// ─────────────────────────────────────────────────────────────────────────────
 class _RecordingsScreen extends StatefulWidget {
   final String saveDirectory;
-
   const _RecordingsScreen({required this.saveDirectory});
 
   @override
@@ -1879,80 +1987,51 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
   String _cleanupLabel = 'Off';
 
   @override
-  void initState() {
-    super.initState();
-    _initialize();
-  }
+  void initState() { super.initState(); _initialize(); }
 
   @override
-  void dispose() {
-    _stopPlayback();
-    super.dispose();
-  }
+  void dispose() { _stopPlayback(); super.dispose(); }
 
   Future<void> _initialize() async {
     final prefs = await SharedPreferences.getInstance();
     final savedLabel = prefs.getString(_cleanupPreferenceKey);
-    if (savedLabel != null && _cleanupOptions.containsKey(savedLabel)) {
-      _cleanupLabel = savedLabel;
-    }
+    if (savedLabel != null && _cleanupOptions.containsKey(savedLabel)) _cleanupLabel = savedLabel;
     await _loadFiles();
   }
 
   Future<void> _loadFiles() async {
     if (widget.saveDirectory.isEmpty) {
       if (!mounted) return;
-      setState(() {
-        _files = const [];
-        _isLoading = false;
-      });
+      setState(() { _files = const []; _isLoading = false; });
       return;
     }
-
     final dir = Directory(widget.saveDirectory);
     if (!await dir.exists()) {
       if (!mounted) return;
-      setState(() {
-        _files = const [];
-        _isLoading = false;
-      });
+      setState(() { _files = const []; _isLoading = false; });
       return;
     }
-
     await _runAutoCleanup(dir);
-
     final entities = await dir.list().where((e) => e.path.endsWith('.m4a')).toList();
-    entities.sort((a, b) {
-      final aModified = File(a.path).lastModifiedSync();
-      final bModified = File(b.path).lastModifiedSync();
-      return bModified.compareTo(aModified);
-    });
-
+    entities.sort((a, b) => File(b.path).lastModifiedSync().compareTo(File(a.path).lastModifiedSync()));
     if (!mounted) return;
     setState(() {
       _files = entities;
       _selectedPaths.removeWhere((path) => !_files.any((f) => f.path == path));
-      if (_selectedPaths.isEmpty) {
-        _selectionMode = false;
-      }
+      if (_selectedPaths.isEmpty) _selectionMode = false;
       _isLoading = false;
     });
   }
 
   Future<void> _runAutoCleanup(Directory dir) async {
     final retentionSeconds = _cleanupOptions[_cleanupLabel];
-    if (retentionSeconds == null) {
-      return;
-    }
-
+    if (retentionSeconds == null) return;
     final cutoff = DateTime.now().subtract(Duration(seconds: retentionSeconds));
     final entities = await dir.list().where((e) => e.path.endsWith('.m4a')).toList();
     for (final entity in entities) {
       final file = File(entity.path);
       final modifiedAt = await file.lastModified();
-      if (modifiedAt.isBefore(cutoff)) {
-        await file.delete();
-      }
+      if (modifiedAt.isBefore(cutoff)) await file.delete();
     }
   }
 
@@ -1963,63 +2042,37 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
       setState(() => _playingPath = null);
       return;
     }
-
-    final started = await _audioChunkChannel
-            .invokeMethod<bool>('playChunkAudio', <String, dynamic>{'path': path}) ??
-        false;
+    final started = await _audioChunkChannel.invokeMethod<bool>('playChunkAudio', <String, dynamic>{'path': path}) ?? false;
     if (!mounted) return;
-    if (started) {
-      setState(() => _playingPath = path);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not play this recording.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    if (started) setState(() => _playingPath = path);
+    else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not play this recording.'), behavior: SnackBarBehavior.floating));
   }
 
   Future<void> _stopPlayback() async {
-    try {
-      await _audioChunkChannel.invokeMethod<bool>('stopChunkAudio');
-    } catch (_) {
-      // ignore
-    }
+    try { await _audioChunkChannel.invokeMethod<bool>('stopChunkAudio'); } catch (_) {}
   }
 
   Future<void> _deleteFile(String path) async {
     if (_playingPath == path) {
       await _stopPlayback();
-      if (mounted) {
-        setState(() => _playingPath = null);
-      }
+      if (mounted) setState(() => _playingPath = null);
     }
-
     final file = File(path);
-    if (await file.exists()) {
-      await file.delete();
-    }
+    if (await file.exists()) await file.delete();
     await _loadFiles();
   }
 
   Future<void> _toggleSelection(String path) async {
     setState(() {
       _selectionMode = true;
-      if (_selectedPaths.contains(path)) {
-        _selectedPaths.remove(path);
-      } else {
-        _selectedPaths.add(path);
-      }
-      if (_selectedPaths.isEmpty) {
-        _selectionMode = false;
-      }
+      if (_selectedPaths.contains(path)) _selectedPaths.remove(path);
+      else _selectedPaths.add(path);
+      if (_selectedPaths.isEmpty) _selectionMode = false;
     });
   }
 
   Future<void> _deleteSelected() async {
     if (_selectedPaths.isEmpty) return;
-
     final count = _selectedPaths.length;
     final shouldDelete = await showDialog<bool>(
           context: context,
@@ -2027,10 +2080,7 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
             title: const Text('Delete recordings?'),
             content: Text('Delete $count selected recording(s)?'),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
+              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: FilledButton.styleFrom(backgroundColor: AppColors.redPrimary),
@@ -2038,25 +2088,15 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
               ),
             ],
           ),
-        ) ??
-        false;
-
+        ) ?? false;
     if (!shouldDelete) return;
-
     await _stopPlayback();
     for (final path in _selectedPaths.toList()) {
       final file = File(path);
-      if (await file.exists()) {
-        await file.delete();
-      }
+      if (await file.exists()) await file.delete();
     }
-
     if (!mounted) return;
-    setState(() {
-      _playingPath = null;
-      _selectedPaths.clear();
-      _selectionMode = false;
-    });
+    setState(() { _playingPath = null; _selectedPaths.clear(); _selectionMode = false; });
     await _loadFiles();
   }
 
@@ -2078,84 +2118,73 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final appBarTitle = _selectionMode
-        ? '${_selectedPaths.length} selected'
-        : 'Recorded Chunks';
-
     return Scaffold(
+      backgroundColor: _T.pageBg,
       appBar: AppBar(
-        title: Text(appBarTitle),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          _selectionMode ? '${_selectedPaths.length} selected' : 'Recorded Chunks',
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: _T.textPrimary, letterSpacing: -0.3),
+        ),
         actions: [
           if (_selectionMode)
-            IconButton(
-              onPressed: _deleteSelected,
-              icon: const Icon(Icons.delete_rounded),
-            ),
+            IconButton(onPressed: _deleteSelected, icon: const Icon(Icons.delete_rounded, color: AppColors.redPrimary)),
           if (_selectionMode)
             IconButton(
-              onPressed: () {
-                setState(() {
-                  _selectionMode = false;
-                  _selectedPaths.clear();
-                });
-              },
+              onPressed: () => setState(() { _selectionMode = false; _selectedPaths.clear(); }),
               icon: const Icon(Icons.close_rounded),
             ),
-          IconButton(
-            onPressed: _loadFiles,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
+          IconButton(onPressed: _loadFiles, icon: const Icon(Icons.refresh_rounded)),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _files.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No recordings found yet.',
-                    style: TextStyle(color: AppColors.textSecondary),
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 64, height: 64,
+                        decoration: BoxDecoration(color: _T.roseTint, shape: BoxShape.circle),
+                        child: const Icon(Icons.mic_off_rounded, color: _T.roseMid, size: 30),
+                      ),
+                      const SizedBox(height: 14),
+                      const Text('No recordings yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _T.textPrimary)),
+                      const SizedBox(height: 6),
+                      Text('Start a recording from the home screen', style: TextStyle(fontSize: 13, color: _T.textSec)),
+                    ],
                   ),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: _files.length + 1,
-                  separatorBuilder: (_, index) => index == 0
-                      ? const SizedBox(height: 14)
-                      : const SizedBox(height: 10),
+                  separatorBuilder: (_, index) => SizedBox(height: index == 0 ? 14 : 8),
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       return Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: _T.cardBorder),
+                          boxShadow: [BoxShadow(color: _T.cardShadow, blurRadius: 8, offset: const Offset(0, 2))],
                         ),
                         child: Row(
                           children: [
-                            const Expanded(
-                              child: Text(
-                                'Auto cleanup',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ),
+                            const Icon(Icons.auto_delete_rounded, size: 16, color: _T.textSec),
+                            const SizedBox(width: 10),
+                            const Expanded(child: Text('Auto cleanup', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _T.textPrimary))),
                             DropdownButton<String>(
                               value: _cleanupLabel,
                               underline: const SizedBox.shrink(),
+                              style: const TextStyle(fontSize: 13, color: _T.textPrimary, fontWeight: FontWeight.w600),
                               items: _cleanupOptions.keys
-                                  .map((label) => DropdownMenuItem<String>(
-                                        value: label,
-                                        child: Text(label),
-                                      ))
+                                  .map((label) => DropdownMenuItem<String>(value: label, child: Text(label)))
                                   .toList(growable: false),
-                              onChanged: (next) {
-                                if (next == null) return;
-                                _updateCleanupPreference(next);
-                              },
+                              onChanged: (next) { if (next == null) return; _updateCleanupPreference(next); },
                             ),
                           ],
                         ),
@@ -2171,54 +2200,42 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
                     return Container(
                       decoration: BoxDecoration(
                         color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSelected ? const Color(0xFF93C5FD) : const Color(0xFFE2E8F0),
-                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: isSelected ? const Color(0xFF93C5FD) : _T.cardBorder),
+                        boxShadow: [BoxShadow(color: _T.cardShadow, blurRadius: 8, offset: const Offset(0, 2))],
                       ),
                       child: ListTile(
-                        onTap: () {
-                          if (_selectionMode) {
-                            _toggleSelection(file.path);
-                          } else {
-                            _togglePlayback(file.path);
-                          }
-                        },
+                        onTap: () => _selectionMode ? _toggleSelection(file.path) : _togglePlayback(file.path),
                         onLongPress: () => _toggleSelection(file.path),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                         leading: _selectionMode
-                            ? Checkbox(
-                                value: isSelected,
-                                onChanged: (_) => _toggleSelection(file.path),
-                              )
-                            : IconButton(
-                                onPressed: () => _togglePlayback(file.path),
-                                icon: Icon(
-                                  isPlaying
-                                      ? Icons.stop_circle_rounded
-                                      : Icons.play_circle_fill_rounded,
-                                  color: const Color(0xFF1D4ED8),
-                                  size: 30,
+                            ? Checkbox(value: isSelected, onChanged: (_) => _toggleSelection(file.path))
+                            : GestureDetector(
+                                onTap: () => _togglePlayback(file.path),
+                                child: Container(
+                                  width: 40, height: 40,
+                                  decoration: BoxDecoration(
+                                    color: isPlaying ? _T.info.withAlpha(20) : _T.pageBg,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                                    color: _T.info,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
-                        title: Text(
-                          fileName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
+                        title: Text(fileName, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _T.textPrimary)),
                         subtitle: Text(
-                          '${_formatBytes(stat.size)} • ${stat.modified}',
-                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          '${_formatBytes(stat.size)} · ${stat.modified}',
+                          style: TextStyle(fontSize: 11, color: _T.textSec),
                         ),
                         trailing: _selectionMode
                             ? null
                             : IconButton(
                                 onPressed: () => _deleteFile(file.path),
-                                icon: const Icon(
-                                  Icons.delete_outline_rounded,
-                                  color: AppColors.redPrimary,
-                                ),
+                                icon: Icon(Icons.delete_outline_rounded, color: AppColors.redPrimary.withAlpha(190)),
                               ),
                       ),
                     );
@@ -2228,66 +2245,9 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
   }
 }
 
-class _TertiaryCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String sub;
-  final List<Color> palette;
-  final VoidCallback onTap;
-  const _TertiaryCard({
-    required this.icon,
-    required this.title,
-    required this.sub,
-    required this.palette,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: palette[0],
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: palette[2].withAlpha(35)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: palette[1],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: palette[2], size: 20),
-            ),
-            const SizedBox(height: 12),
-            Text(title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -0.1,
-                )),
-            const SizedBox(height: 4),
-            Text(sub,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                  height: 1.4,
-                )),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Safety Tip Card (tappable, animated)
+// ─────────────────────────────────────────────────────────────────────────────
+// Safety Tip Card
+// ─────────────────────────────────────────────────────────────────────────────
 const _kTips = [
   (Icons.psychology_rounded, 'Trust Your Instincts',
       'If something feels wrong, it probably is. Leave without explanation.'),
@@ -2305,20 +2265,19 @@ class _TipCard extends StatefulWidget {
 
 class _TipCardState extends State<_TipCard> {
   int _i = 0;
+
   @override
   Widget build(BuildContext context) {
     final (icon, title, body) = _kTips[_i];
     return GestureDetector(
       onTap: () => setState(() => _i = (_i + 1) % _kTips.length),
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 320),
         transitionBuilder: (child, anim) => FadeTransition(
           opacity: anim,
           child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.04, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+            position: Tween<Offset>(begin: const Offset(0.05, 0), end: Offset.zero)
+                .animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
             child: child,
           ),
         ),
@@ -2326,15 +2285,16 @@ class _TipCardState extends State<_TipCard> {
           key: ValueKey(_i),
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: _T.card,
-            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Colors.white, _T.rosePale],
+            ),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _T.cardBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x08000000),
-                blurRadius: 12,
-                offset: Offset(0, 4),
-              ),
+            boxShadow: [
+              BoxShadow(color: _T.roseMid.withAlpha(14), blurRadius: 16, offset: const Offset(0, 6)),
+              const BoxShadow(color: Color(0x08000000), blurRadius: 4, offset: Offset(0, 2)),
             ],
           ),
           child: Column(
@@ -2343,53 +2303,37 @@ class _TipCardState extends State<_TipCard> {
               Row(
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 38, height: 38,
                     decoration: BoxDecoration(
-                      color: AppColors.roseTint,
-                      borderRadius: BorderRadius.circular(10),
+                      gradient: _T.roseGrad,
+                      borderRadius: BorderRadius.circular(11),
+                      boxShadow: [BoxShadow(color: _T.roseMid.withAlpha(60), blurRadius: 8, offset: const Offset(0, 3))],
                     ),
-                    child: Icon(icon, color: AppColors.rosePrimary, size: 18),
+                    child: Icon(icon, color: Colors.white, size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          letterSpacing: -0.1,
-                        )),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: _T.textPrimary, letterSpacing: -0.3)),
                   ),
-                  Text(
-                    '${_i + 1} / ${_kTips.length}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(color: _T.roseTint, borderRadius: BorderRadius.circular(10)),
+                    child: Text(
+                      '${_i + 1}/${_kTips.length}',
+                      style: const TextStyle(fontSize: 11, color: _T.roseMid, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              Text(body,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                    height: 1.55,
-                  )),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
+              Text(body, style: const TextStyle(fontSize: 13, color: _T.textSec, height: 1.6)),
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.touch_app_rounded,
-                      size: 12,
-                      color: AppColors.textSecondary.withAlpha(100)),
+                  Icon(Icons.touch_app_rounded, size: 12, color: _T.textMuted),
                   const SizedBox(width: 5),
-                  Text('Tap for next tip',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary.withAlpha(100),
-                      )),
+                  Text('Tap for next tip', style: TextStyle(fontSize: 11, color: _T.textMuted)),
                 ],
               ),
             ],
@@ -2401,34 +2345,37 @@ class _TipCardState extends State<_TipCard> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Utility: Shimmer placeholder
+// Shimmer
 // ─────────────────────────────────────────────────────────────────────────────
 class _Shimmer extends StatefulWidget {
   final double width;
   final double height;
   const _Shimmer({required this.width, required this.height});
+
   @override
   State<_Shimmer> createState() => _ShimmerState();
 }
 
 class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
-        ..repeat(reverse: true);
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 950))..repeat(reverse: true);
+
   @override
   void dispose() { _c.dispose(); super.dispose(); }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _c,
-      builder: (_, _) => Container(
+      builder: (_, __) => Container(
         width: widget.width,
         height: widget.height,
         decoration: BoxDecoration(
-          color: Color.lerp(
-            const Color(0xFFEEE0E8),
-            const Color(0xFFF9F0F5),
-            _c.value,
+          gradient: LinearGradient(
+            colors: [
+              Color.lerp(const Color(0xFFEED9E8), const Color(0xFFF9F0F5), _c.value)!,
+              Color.lerp(const Color(0xFFF9F0F5), const Color(0xFFEED9E8), _c.value)!,
+            ],
           ),
           borderRadius: BorderRadius.circular(widget.height / 2),
         ),
@@ -2438,7 +2385,7 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Placeholder tabs
+// Placeholder tab
 // ─────────────────────────────────────────────────────────────────────────────
 class _TabPlaceholder extends StatelessWidget {
   final IconData icon;
@@ -2453,27 +2400,15 @@ class _TabPlaceholder extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 64,
-              height: 64,
-              decoration: const BoxDecoration(
-                color: AppColors.roseTint,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: AppColors.rosePrimary, size: 30),
+              width: 64, height: 64,
+              decoration: BoxDecoration(gradient: _T.roseGrad, shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: _T.roseMid.withAlpha(60), blurRadius: 16, offset: const Offset(0, 6))]),
+              child: Icon(icon, color: Colors.white, size: 30),
             ),
             const SizedBox(height: 14),
-            Text(label,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                )),
+            Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _T.textPrimary, letterSpacing: -0.3)),
             const SizedBox(height: 6),
-            const Text('Coming soon',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                )),
+            Text('Coming soon', style: TextStyle(fontSize: 13, color: _T.textSec)),
           ],
         ),
       ),

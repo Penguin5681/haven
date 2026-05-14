@@ -12,7 +12,7 @@ public class FakeCallActionReceiver extends BroadcastReceiver {
             return;
         }
 
-        String callerName = intent.getStringExtra(FakeCallUiManager.EXTRA_CALLER_NAME);
+       String callerName = intent.getStringExtra(FakeCallUiManager.EXTRA_CALLER_NAME);
         String callerNumber = intent.getStringExtra(FakeCallUiManager.EXTRA_CALLER_NUMBER);
         String action = intent.getAction();
 

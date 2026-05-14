@@ -26,8 +26,7 @@ class _AuthorityHomeScreenState extends State<AuthorityHomeScreen> {
   Future<void> _checkAuth() async {
     final token = await AuthService.instance.getToken();
     if (mounted) {
-      setState(() {
-        // Here we could ideally verify if the token role is Authority
+      setState(() {       
         _isLoggedIn = token != null;
         _isLoading = false;
       });
