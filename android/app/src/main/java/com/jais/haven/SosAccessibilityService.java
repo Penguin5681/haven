@@ -22,17 +22,18 @@ public class SosAccessibilityService extends AccessibilityService {
     private static final int REQUIRED_PRESS_COUNT = 5;
     private static final long PRESS_WINDOW_MS = 3500L;
 
+    private boolean isVolUpPressed = false;
+    private boolean isVolDownPressed = false;
+
     private int pressCount = 0;
     private long lastPressAtMs = 0L;
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        // Key events are handled in onKeyEvent. No-op here.
     }
 
     @Override
     public void onInterrupt() {
-        // No-op.
     }
 
     @Override
@@ -46,24 +47,24 @@ public class SosAccessibilityService extends AccessibilityService {
             return false;
         }
 
-        registerVolumePress();
+        registerVolumePress(event);
 
-        // Return false to avoid swallowing normal volume behavior.
         return false;
     }
 
-    private void registerVolumePress() {
-        final long now = SystemClock.elapsedRealtime();
-        if (now - lastPressAtMs > PRESS_WINDOW_MS) {
-            pressCount = 0;
+    private void registerVolumePress(KeyEvent event) {
+        final int keyCode = event.getKeyCode();
+
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            isVolUpPressed = true;
+        } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            isVolDownPressed = true;
         }
 
-        pressCount += 1;
-        lastPressAtMs = now;
+        if (isVolUpPressed && isVolDownPressed) {
+            isVolUpPressed = false;
+            isVolDownPressed = false;
 
-        if (pressCount >= REQUIRED_PRESS_COUNT) {
-            pressCount = 0;
-            lastPressAtMs = 0L;
             triggerSosNotification();
         }
     }
@@ -79,8 +80,7 @@ public class SosAccessibilityService extends AccessibilityService {
                 launchIntent,
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
                         ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-                        : PendingIntent.FLAG_UPDATE_CURRENT
-        );
+                        : PendingIntent.FLAG_UPDATE_CURRENT);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, SOS_CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.stat_notify_error)
@@ -103,14 +103,12 @@ public class SosAccessibilityService extends AccessibilityService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             int permissionState = ContextCompat.checkSelfPermission(
                     this,
-                    android.Manifest.permission.POST_NOTIFICATIONS
-            );
+                    android.Manifest.permission.POST_NOTIFICATIONS);
             if (permissionState != PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(
                         this,
                         "SOS triggered (notification permission missing)",
-                        Toast.LENGTH_LONG
-                ).show();
+                        Toast.LENGTH_LONG).show();
                 return;
             }
         }
@@ -130,8 +128,7 @@ public class SosAccessibilityService extends AccessibilityService {
         NotificationChannel channel = new NotificationChannel(
                 SOS_CHANNEL_ID,
                 "Haven SOS Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-        );
+                NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Notifications shown when SOS is triggered by hardware buttons.");
 
         NotificationManager manager = getSystemService(NotificationManager.class);
