@@ -10,6 +10,8 @@ import 'package:record/record.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+// import 'package:telephony/telephony.dart';
+import 'package:another_telephony/telephony.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/fake_call_service.dart';
@@ -20,27 +22,21 @@ import 'safe_routes_tab.dart';
 import 'trusted_contacts_ui.dart';
 import 'women_profile_tab.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Design Tokens  — "Haven" — Luxury Safety Palette
-// ─────────────────────────────────────────────────────────────────────────────
 abstract final class _T {
-  // ── Surfaces
-  static const Color pageBg       = Color(0xFFFDF4F8);   // warm blush
-  static const Color pageBg2      = Color(0xFFF7EBF3);   // deeper blush accent
+  static const Color pageBg       = Color(0xFFFDF4F8);   
+  static const Color pageBg2      = Color(0xFFF7EBF3);   
   static const Color card         = Color(0xFFFFFFFF);
   static const Color cardBorder   = Color(0xFFF2D9EA);
   static const Color cardShadow   = Color(0x12A0145A);
   static const Color headerBg     = Color(0xFFFFFFFF);
-  static const Color glassWhite   = Color(0xF2FFFFFF);   // frosted glass surface
+  static const Color glassWhite   = Color(0xF2FFFFFF);   
 
-  // ── Brand
-  static const Color roseDeep     = Color(0xFFA0145A);   // deep magenta rose
-  static const Color roseMid      = Color(0xFFCC2E7A);   // brand primary
-  static const Color roseSoft     = Color(0xFFEF6FA8);   // lighter accent
+  static const Color roseDeep     = Color(0xFFA0145A);   
+  static const Color roseMid      = Color(0xFFCC2E7A);   
+  static const Color roseSoft     = Color(0xFFEF6FA8);   
   static const Color roseTint     = Color(0xFFFCE8F3);
   static const Color rosePale     = Color(0xFFFFF0F8);
 
-  // ── SOS
   static const Color sosCore      = Color(0xFFD32F2F);
   static const Color sosDeep      = Color(0xFFB71C1C);
   static const Color sosBright    = Color(0xFFFF5252);
@@ -48,29 +44,23 @@ abstract final class _T {
   static const Color sosRing2     = Color(0x16D32F2F);
   static const Color sosRing3     = Color(0x09D32F2F);
 
-  // ── Action cards  [surface, icon-bg, icon-fg, gradient-start, gradient-end]
-  // Live Track
   static const List<Color> actBlue = [
     Color(0xFFEFF6FF), Color(0xFFD4E9FF), Color(0xFF1565C0),
     Color(0xFFEFF6FF), Color(0xFFDBEEFF),
   ];
-  // Fake Call
   static const List<Color> actGreen = [
     Color(0xFFF0FDF4), Color(0xFFC8F0D8), Color(0xFF166534),
     Color(0xFFF0FDF4), Color(0xFFD6FAE8),
   ];
-  // Record
   static const List<Color> actPurple = [
     Color(0xFFF5F0FF), Color(0xFFE4D8FF), Color(0xFF5B21B6),
     Color(0xFFF5F0FF), Color(0xFFEDE5FF),
   ];
-  // Safe Places
   static const List<Color> actAmber = [
     Color(0xFFFFFBEB), Color(0xFFFFE9C0), Color(0xFF92400E),
     Color(0xFFFFFBEB), Color(0xFFFFF0CC),
   ];
 
-  // ── Utility
   static const Color success      = Color(0xFF15803D);
   static const Color warning      = Color(0xFFB45309);
   static const Color info         = Color(0xFF1D4ED8);
@@ -78,7 +68,6 @@ abstract final class _T {
   static const Color textSec      = Color(0xFF7A5068);
   static const Color textMuted    = Color(0xFFB89AAC);
 
-  // ── Gradients
   static const LinearGradient headerGrad = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -101,9 +90,6 @@ abstract final class _T {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Root scaffold
-// ─────────────────────────────────────────────────────────────────────────────
 class WomenDashboardScreen extends StatefulWidget {
   final VoidCallback onLogout;
   const WomenDashboardScreen({super.key, required this.onLogout});
@@ -254,9 +240,6 @@ class _WomenDashboardScreenState extends State<WomenDashboardScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bottom Navigation — frosted glass with gradient active pill
-// ─────────────────────────────────────────────────────────────────────────────
 class _BottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onChanged;
@@ -318,9 +301,6 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Home Tab
-// ─────────────────────────────────────────────────────────────────────────────
 class _HomeTab extends StatefulWidget {
   final VoidCallback onLogout;
   final List<TrustedContact> trustedContacts;
@@ -402,6 +382,7 @@ class _HomeTabState extends State<_HomeTab>
           try {
             await SosService.instance.triggerSos();
             await _startSosAudioStreaming();
+            await _sendSosSmsToContacts();
           } catch (e) {
             debugPrint('Error triggering SOS: $e');
           }
@@ -532,8 +513,12 @@ class _HomeTabState extends State<_HomeTab>
       _recordingSaveDirectory = saveDirectory;
       _currentChunkPath = currentChunkPath;
     });
-    if (isRecording) _startRecordingStatusTimer();
-    else _stopRecordingStatusTimer();
+    if (isRecording) {
+      _startRecordingStatusTimer();
+    } 
+    else {
+      _stopRecordingStatusTimer();
+    } 
   }
 
   Future<void> _startSosAudioStreaming() async {
@@ -610,6 +595,41 @@ class _HomeTabState extends State<_HomeTab>
     }
     try { await _rotateAndUploadSosChunk(restartRecording: false); } catch (_) {}
     _isSosAudioStreaming = false;
+  }
+
+  Future<void> _sendSosSmsToContacts() async {
+    final permissionsGranted = await Telephony.instance.requestPhoneAndSmsPermissions ?? false;
+    if (!permissionsGranted) {
+      debugPrint('SMS permissions denied.');
+      return;
+    }
+    
+    final store = const TrustedContactsStore();
+    final contacts = await store.loadContacts();
+    if (contacts.isEmpty) return;
+    
+    String locationText = "Check my location.";
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      ).timeout(const Duration(seconds: 12));
+      locationText = "My location: https://maps.google.com/?q=${position.latitude},${position.longitude}";
+    } catch (_) {}
+    
+    final message = "SOS Alerts! I need help. $locationText";
+    for (final contact in contacts) {
+      if (contact.phoneNumber.isNotEmpty) {
+        try {
+          Telephony.instance.sendSms(
+            to: contact.phoneNumber,
+            message: message,
+          );
+          debugPrint('SMS sent to ${contact.phoneNumber}');
+        } catch (e) {
+          debugPrint('Failed to send SMS to ${contact.phoneNumber}: $e');
+        }
+      }
+    }
   }
 
   void _startRecordingStatusTimer() {
@@ -874,7 +894,6 @@ class _HomeTabState extends State<_HomeTab>
   }
 }
 
-// ── Sheet tile helper (for fake call bottom sheet)
 class _SheetTile extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -921,9 +940,6 @@ class _SheetTile extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. Header — gradient background with floating avatar
-// ─────────────────────────────────────────────────────────────────────────────
 class _Header extends StatelessWidget {
   final double topPad;
   final String name;
@@ -1044,9 +1060,6 @@ class _HeaderBtn extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. SOS Hero — dramatic with multi-ring pulse
-// ─────────────────────────────────────────────────────────────────────────────
 class _SOSHero extends StatelessWidget {
   final AnimationController pulse;
   final AnimationController hold;
@@ -1257,9 +1270,6 @@ class _SOSButtonCore extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. Primary Actions — gradient pills
-// ─────────────────────────────────────────────────────────────────────────────
 class _PrimarySecondaryRow extends StatelessWidget {
   final VoidCallback onFakeCallTap;
   final VoidCallback onShareLocationTap;
@@ -1368,9 +1378,6 @@ class _GradientPillActionState extends State<_GradientPillAction> with SingleTic
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Incomplete Profile Prompt
-// ─────────────────────────────────────────────────────────────────────────────
 class _IncompleteProfilePrompt extends StatelessWidget {
   final VoidCallback onTap;
   const _IncompleteProfilePrompt({required this.onTap});
@@ -1413,9 +1420,6 @@ class _IncompleteProfilePrompt extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SOS Setup Status Card — refined glassmorphism
-// ─────────────────────────────────────────────────────────────────────────────
 class _SosSetupStatusCard extends StatelessWidget {
   final bool isLoading;
   final bool accessibilityEnabled;
@@ -1601,9 +1605,6 @@ class _SetupStatusRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 5. Scroll Zone
-// ─────────────────────────────────────────────────────────────────────────────
 class _ScrollZone extends StatelessWidget {
   final List<TrustedContact> trustedContacts;
   final bool isLoadingContacts;
@@ -1945,7 +1946,7 @@ class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixi
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _c,
-      builder: (_, __) => Container(
+      builder: (_, _) => Container(
         width: 7, height: 7,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -1956,9 +1957,6 @@ class _PulseDotState extends State<_PulseDot> with SingleTickerProviderStateMixi
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Recordings Screen
-// ─────────────────────────────────────────────────────────────────────────────
 class _RecordingsScreen extends StatefulWidget {
   final String saveDirectory;
   const _RecordingsScreen({required this.saveDirectory});
@@ -2044,8 +2042,12 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
     }
     final started = await _audioChunkChannel.invokeMethod<bool>('playChunkAudio', <String, dynamic>{'path': path}) ?? false;
     if (!mounted) return;
-    if (started) setState(() => _playingPath = path);
-    else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not play this recording.'), behavior: SnackBarBehavior.floating));
+    if (started) {
+      setState(() => _playingPath = path);
+    }
+    else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not play this recording.'), behavior: SnackBarBehavior.floating));
+    }
   }
 
   Future<void> _stopPlayback() async {
@@ -2065,8 +2067,12 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
   Future<void> _toggleSelection(String path) async {
     setState(() {
       _selectionMode = true;
-      if (_selectedPaths.contains(path)) _selectedPaths.remove(path);
-      else _selectedPaths.add(path);
+      if (_selectedPaths.contains(path)) {
+        _selectedPaths.remove(path);
+      }
+      else {
+        _selectedPaths.add(path);
+      }
       if (_selectedPaths.isEmpty) _selectionMode = false;
     });
   }
@@ -2245,9 +2251,6 @@ class _RecordingsScreenState extends State<_RecordingsScreen> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Safety Tip Card
-// ─────────────────────────────────────────────────────────────────────────────
 const _kTips = [
   (Icons.psychology_rounded, 'Trust Your Instincts',
       'If something feels wrong, it probably is. Leave without explanation.'),
@@ -2344,9 +2347,6 @@ class _TipCardState extends State<_TipCard> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shimmer
-// ─────────────────────────────────────────────────────────────────────────────
 class _Shimmer extends StatefulWidget {
   final double width;
   final double height;
@@ -2367,7 +2367,7 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _c,
-      builder: (_, __) => Container(
+      builder: (_, _) => Container(
         width: widget.width,
         height: widget.height,
         decoration: BoxDecoration(
@@ -2378,38 +2378,6 @@ class _ShimmerState extends State<_Shimmer> with SingleTickerProviderStateMixin 
             ],
           ),
           borderRadius: BorderRadius.circular(widget.height / 2),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Placeholder tab
-// ─────────────────────────────────────────────────────────────────────────────
-class _TabPlaceholder extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _TabPlaceholder({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64, height: 64,
-              decoration: BoxDecoration(gradient: _T.roseGrad, shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: _T.roseMid.withAlpha(60), blurRadius: 16, offset: const Offset(0, 6))]),
-              child: Icon(icon, color: Colors.white, size: 30),
-            ),
-            const SizedBox(height: 14),
-            Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _T.textPrimary, letterSpacing: -0.3)),
-            const SizedBox(height: 6),
-            Text('Coming soon', style: TextStyle(fontSize: 13, color: _T.textSec)),
-          ],
         ),
       ),
     );
